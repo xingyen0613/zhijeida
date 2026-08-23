@@ -89,6 +89,13 @@ enum LanguageModel {
             chunks.append(chunk)
             pos = chunk.range.lowerBound
         }
+        // 找不到完整路徑（例如資料未載入）時退回逐音節，避免整段文字消失
+        guard pos == 0, !chunks.isEmpty else {
+            return syllables.enumerated().map {
+                Chunk(word: Bopomofo.candidates($0.element).first ?? Bopomofo.symbols($0.element),
+                      range: $0.offset..<($0.offset + 1))
+            }
+        }
         return chunks.reversed()
     }
 }
