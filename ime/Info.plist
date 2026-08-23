@@ -7,13 +7,15 @@
 	<key>CFBundleExecutable</key>
 	<string>SmartBopomofo</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.smartbopomofo.inputmethod</string>
+	<string>com.yen.inputmethod.SmartBopomofo</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
 	<string>SmartBopomofo</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
+	<key>CFBundleSignature</key>
+	<string>SBPM</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.1</string>
 	<key>CFBundleVersion</key>
@@ -25,9 +27,19 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>InputMethodConnectionName</key>
-	<string>com.smartbopomofo.inputmethod_Connection</string>
+	<string>com.yen.inputmethod.SmartBopomofo_Connection</string>
 	<key>InputMethodServerControllerClass</key>
 	<string>SmartBopomofoInputController</string>
+	<key>InputMethodServerDelegateClass</key>
+	<string>SmartBopomofoInputController</string>
+	<key>TISInputSourceID</key>
+	<string>com.yen.inputmethod.SmartBopomofo</string>
+	<key>TISIntendedLanguage</key>
+	<string>zh-Hant</string>
+	<key>TICapsLockLanguageSwitchCapable</key>
+	<true/>
+	<key>tsInputMethodIconFileKey</key>
+	<string>Bopomofo.tiff</string>
 	<key>tsInputMethodCharacterRepertoireKey</key>
 	<array>
 		<string>Hant</string>
@@ -37,10 +49,10 @@
 	<dict>
 		<key>tsInputModeListKey</key>
 		<dict>
-			<key>com.smartbopomofo.inputmethod.Bopomofo</key>
+			<key>com.yen.inputmethod.SmartBopomofo.Bopomofo</key>
 			<dict>
 				<key>TISInputSourceID</key>
-				<string>com.smartbopomofo.inputmethod.Bopomofo</string>
+				<string>com.yen.inputmethod.SmartBopomofo.Bopomofo</string>
 				<key>TISIntendedLanguage</key>
 				<string>zh-Hant</string>
 				<key>tsInputModeAlternateMenuIconFileKey</key>
@@ -54,6 +66,8 @@
 				<true/>
 				<key>tsInputModeIsVisibleKey</key>
 				<true/>
+				<key>tsInputModeKeyEquivalentModifiersKey</key>
+				<integer>4608</integer>
 				<key>tsInputModeMenuIconFileKey</key>
 				<string>Bopomofo.tiff</string>
 				<key>tsInputModePaletteIconFileKey</key>
@@ -66,7 +80,7 @@
 		</dict>
 		<key>tsVisibleInputModeOrderedArrayKey</key>
 		<array>
-			<string>com.smartbopomofo.inputmethod.Bopomofo</string>
+			<string>com.yen.inputmethod.SmartBopomofo.Bopomofo</string>
 		</array>
 	</dict>
 </dict>

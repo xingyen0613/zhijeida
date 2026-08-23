@@ -1,7 +1,7 @@
 import Cocoa
 import InputMethodKit
 
-let kConnectionName = "com.smartbopomofo.inputmethod_Connection"
+let kConnectionName = "com.yen.inputmethod.SmartBopomofo_Connection"
 
 // IMKServer 需要 Info.plist 中的 InputMethodConnectionName 與此一致
 let server = IMKServer(name: kConnectionName,

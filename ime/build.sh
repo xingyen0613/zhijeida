@@ -15,6 +15,14 @@ swiftc -O \
 
 cp Info.plist "$APP/Contents/Info.plist"
 cp Resources/*.tiff "$APP/Contents/Resources/"
+
+# 傳統 app bundle 需要 PkgInfo（Xcode 會自動產生，手工組要自己補）
+printf 'APPLSBPM' > "$APP/Contents/PkgInfo"
+
+mkdir -p "$APP/Contents/Resources/en.lproj"
+cat > "$APP/Contents/Resources/en.lproj/InfoPlist.strings" <<'STRINGS'
+"CFBundleName" = "SmartBopomofo";
+STRINGS
 codesign --force --sign - "$APP"
 
 echo "已產生 $APP"
