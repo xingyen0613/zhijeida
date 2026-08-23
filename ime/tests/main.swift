@@ -113,13 +113,26 @@ check("向右刪除只刪一個", k.text, "(")
 print("\n跨段落詞（56 + 接 = 直接）")
 var m = typed("()56ru, ")
 check("預設", m.text, "()56接")
-m.moveCursor(-1)
+check("數字各自成單位", m.itemCount, 5)      // ( ) 5 6 接
+m.moveCursor(-1)                              // 游標移到「6」之後
 let mList = m.candidatesAtCursor()
-check("候選含跨段落詞", mList.contains { $0.word == "直接" } ? "yes" : "no", "yes")
+check("往前合併後仍查得到詞", mList.contains { $0.word == "直接" } ? "yes" : "no", "yes")
+check("也查得到單字「直」", mList.contains { $0.word == "直" } ? "yes" : "no", "yes")
 if let joined = mList.first(where: { $0.word == "直接" }) {
     m.choose(joined)
     check("選後合成", m.text, "()直接")
 }
+var m2 = typed("()56ru, ")
+m2.moveCursor(-1)
+if let single = m2.candidatesAtCursor().first(where: { $0.word == "直" }) {
+    m2.choose(single)
+    check("只選單字時保留後字", m2.text, "()直接")
+}
+var m3 = typed("()56ru, ")
+m3.moveCursorToStart()
+m3.moveCursor(3)                              // 停在 5 與 6 之間
+check("游標可停在數字之間", { let (t, o) = m3.marked(pendingKeys: "")
+    return String(t.prefix(o)) + "|" + String(t.dropFirst(o)) }(), "()5|6接")
 
 print("\n空輸入不應產生空段落")
 var n = Composition()

@@ -18,6 +18,25 @@ class SmartBopomofoInputController: IMKInputController {
         guard let s = string, let ch = s.first,
               let client = sender as? IMKTextInput else { return false }
 
+        // Ctrl 組合要用 charactersIgnoringModifiers 取原始按鍵，
+        // 因為 Ctrl 送進來的 characters 可能已經是控制字元。
+        // 這段必須排在下面的控制字元過濾之前，否則會被提前擋掉。
+        if let event = NSApp.currentEvent, event.modifierFlags.contains(.control) {
+            let raw = event.charactersIgnoringModifiers ?? s
+            if let full = Symbols.full(raw) {
+                imeLog("全形符號 \(raw) -> \(full)")
+                flushPending()
+                composition.insert(keys: full, isChinese: false)
+                update(client)
+                return true
+            }
+            // 其他 Ctrl 組合是應用程式的快捷鍵。放行之前先把組字區送出，
+            // 否則使用者已經打好的內容會隨著焦點轉移憑空消失。
+            imeLog("Ctrl 快捷鍵 \(raw)，放行")
+            if !composition.isEmpty || !pending.isEmpty { commit(client) }
+            return false
+        }
+
         // 私有區字元（方向鍵等）與控制字元不是可輸入的文字，直接忽略。
         // 注意這裡要吃掉而不是回傳 false —— 回傳 false 會讓按鍵落到
         // 應用程式手上，組字區就被清掉了。
@@ -28,18 +47,6 @@ class SmartBopomofoInputController: IMKInputController {
                 imeLog("忽略非文字按鍵 U+\(String(scalar.value, radix: 16))")
                 return !composition.isEmpty || !pending.isEmpty
             }
-        }
-
-        // Ctrl + 符號輸出全形。修飾鍵從當前事件讀取，
-        // 這樣不必實作 inputText(_:key:modifiers:client:)——實作它會讓
-        // IMK 連方向鍵與 Enter 都送進文字路徑。
-        if let event = NSApp.currentEvent, event.modifierFlags.contains(.control),
-           let full = Symbols.full(s) {
-            imeLog("全形符號 \(s) -> \(full)")
-            flushPending()
-            composition.insert(keys: full, isChinese: false)
-            update(client)
-            return true
         }
 
         // 候選字視窗開啟時，數字鍵直接選字

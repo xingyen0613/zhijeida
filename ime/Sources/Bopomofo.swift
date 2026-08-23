@@ -100,7 +100,8 @@ enum Bopomofo {
         var result: [String] = []
         var current = ""
         for ch in keys {
-            if ch.isLetter || ch.isNumber {
+            // 字母連在一起算一個詞；數字與符號各自獨立，游標才進得去
+            if ch.isLetter {
                 current.append(ch)
             } else {
                 if !current.isEmpty { result.append(current); current = "" }

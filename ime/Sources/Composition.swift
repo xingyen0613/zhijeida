@@ -31,6 +31,10 @@ struct Candidate {
     var isLiteral: Bool = false
     /// 若這個候選是從英文段落的尾段切出來的，這是切剩的英文前綴
     var englishPrefix: String? = nil
+    /// 這個候選要吃掉哪幾個英文 item（含往前合併的相鄰片段）
+    var englishRange: Range<Int>? = nil
+    /// 切出來的中文音節按鍵
+    var syllableKeys: String? = nil
 }
 
 /// 尚未上屏的組字內容。
@@ -194,11 +198,16 @@ struct Composition {
             var list = LanguageModel.candidates(literal).map {
                 Candidate(word: $0.word, start: target, span: 1, score: $0.score)
             }
-            for offset in 0..<literal.count {
-                let idx = literal.index(literal.startIndex, offsetBy: offset)
-                let tail = String(literal[idx...])
-                let prefix = String(literal[..<idx])
-                guard offset > 0 || !prefix.isEmpty || literal.count > 0 else { continue }
+            // 往前合併相鄰的英文片段：() 5 6 是三個 item，
+            // 但「直接」要從 56 才查得到，所以要把它們接回一整串來找尾段。
+            var englishStart = target
+            while englishStart > 0, !items[englishStart - 1].isChinese { englishStart -= 1 }
+            let merged = items[englishStart...target].map(\.keys).joined()
+
+            for offset in 0..<merged.count {
+                let idx = merged.index(merged.startIndex, offsetBy: offset)
+                let tail = String(merged[idx...])
+                let prefix = String(merged[..<idx])
                 // 尾段本身，以及尾段再接上後面幾個中文音節（56 + 接 = 直接）
                 for extra in 0..<LanguageModel.maxSpan {
                     let end = target + 1 + extra
@@ -206,9 +215,11 @@ struct Composition {
                     guard items[(target + 1)..<end].allSatisfy(\.isChinese) else { break }
                     let keys = tail + items[(target + 1)..<end].map(\.keys).joined()
                     for entry in LanguageModel.candidates(keys) {
-                        list.append(Candidate(word: entry.word, start: target,
+                        list.append(Candidate(word: entry.word, start: englishStart,
                                               span: 1 + extra, score: entry.score,
-                                              englishPrefix: offset == 0 ? "" : prefix))
+                                              englishPrefix: prefix,
+                                              englishRange: englishStart..<(target + 1),
+                                              syllableKeys: tail))
                     }
                 }
             }
@@ -255,21 +266,23 @@ struct Composition {
 
     mutating func choose(_ candidate: Candidate) {
         // 從英文段落切出中文：把該段拆成「英文前綴」與「中文音節」兩個 item
-        if let prefix = candidate.englishPrefix, candidate.start < items.count {
-            let whole = items[candidate.start].keys
-            guard prefix.count < whole.count else { return }
-            let syllable = String(whole.dropFirst(prefix.count))
-            if prefix.isEmpty {
-                // 整段都是中文，不需要拆
-                items[candidate.start] = .chinese(keys: syllable)
-                overrides[candidate.start] = (candidate.word, candidate.span)
-            } else {
-                items[candidate.start] = .english(prefix)
-                items.insert(.chinese(keys: syllable), at: candidate.start + 1)
-                shiftOverrides(from: candidate.start + 1, by: 1)
-                overrides[candidate.start + 1] = (candidate.word, candidate.span)
-                if cursor > candidate.start { cursor += 1 }
-            }
+        // 從英文片段切出中文：把涵蓋的英文 item 換成「英文前綴 + 中文音節」
+        if let range = candidate.englishRange,
+           let syllable = candidate.syllableKeys,
+           let prefix = candidate.englishPrefix,
+           range.upperBound <= items.count {
+            var replacement: [Item] = []
+            if !prefix.isEmpty { replacement.append(.english(prefix)) }
+            replacement.append(.chinese(keys: syllable))
+
+            let delta = replacement.count - range.count
+            items.replaceSubrange(range, with: replacement)
+            overrides = overrides.filter { !range.contains($0.key) }
+            if delta != 0 { shiftOverrides(from: range.upperBound, by: delta) }
+
+            let syllableIndex = range.lowerBound + replacement.count - 1
+            overrides[syllableIndex] = (candidate.word, candidate.span)
+            cursor = min(max(cursor + delta, 0), items.count)
             return
         }
         // 蓋住的範圍內原有的選擇要清掉，避免衝突
