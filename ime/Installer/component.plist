@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<array>
+	<dict>
+		<key>BundleHasStrictIdentifier</key>
+		<true/>
+		<!-- 關掉 relocation：預設是 true，Installer 會去找系統上已註冊的同 id
+		     bundle 並裝到那個位置。開發機上 ime/build/Zhijeida.app 就可能被找到，
+		     結果是裝錯地方、~/Library/Input Methods 反而空的。 -->
+		<key>BundleIsRelocatable</key>
+		<false/>
+		<!-- 關掉版本檢查：預設會在目標端版本較新時跳過安裝。
+		     重裝同版本（例如修正版重編）時應該直接覆蓋。 -->
+		<key>BundleIsVersionChecked</key>
+		<false/>
+		<key>BundleOverwriteAction</key>
+		<string>upgrade</string>
+		<key>RootRelativeBundlePath</key>
+		<string>Zhijeida.app</string>
+	</dict>
+</array>
+</plist>

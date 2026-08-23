@@ -34,9 +34,39 @@ macOS 的注音輸入法，讓你在中文輸入狀態下直接打英文，不�
 - **學習你的用字**：手動選過的詞會提高權重，下次自動選字偏向它
 - **數字與符號**：`1234567890` 不會被讀成注音；中文後的 `,` 自動變「，」，英文後維持半形
 
-## 安裝
+## 下載安裝
 
-需要 macOS 12 以上。**不需要 Xcode**，Command Line Tools 的 `swiftc` 就能編譯。
+到 [Releases](https://github.com/xingyen0613/zhijeida/releases) 下載 **`Zhijeida-0.1.pkg`**，
+只有這一個檔案，Apple Silicon 與 Intel 共用。需要 macOS 12 以上。
+
+**1. 打開安裝檔。** 第一次打開會被系統擋下，說「無法打開，因為無法驗證開發者」。
+這個輸入法沒有 Apple 的開發者簽章（簽章與公證需要付費的 Apple Developer Program），
+不是檔案有問題。到「**系統設定 → 隱私權與安全性**」往下捲，會看到剛才被擋的檔案，
+按「**仍要打開**」，再打開一次安裝檔即可。
+
+**2. 一路按「繼續」完成安裝。** 輸入法會裝進你自己的家目錄
+（`~/Library/Input Methods`），不需要管理員密碼，也不會動到系統檔案。
+
+**3. 重新開機。** 安裝程式最後會請你重開機。macOS 只在開機登入時掃描輸入法目錄，
+這一步無法省略，Apple 官方也確認目前沒有規避的方法
+（開發者論壇 thread 775526，Feedback FB23026482）。
+
+**4. 加進輸入來源。** 重開機後到「**系統設定 → 鍵盤 → 輸入來源 → 編輯**」，
+按左下角的 **+**，選「**繁體中文**」，在清單裡找到 **Zhijeida** 並加入。
+
+之後用選單列右上角的輸入法選單、或 `Control + Space` 切換過去，就能開始打字。
+要移除的話，刪掉 `~/Library/Input Methods/Zhijeida.app` 再重開機。
+
+### Intel Mac
+
+安裝檔是 universal binary，`arm64` 與 `x86_64` 兩個架構都包在裡面。`x86_64` 那一半
+已在 Apple Silicon 上透過 Rosetta 確認能正常啟動、載入語言模型並正確查到詞條，
+但**沒有在真正的 Intel 機器上測過**。如果你在 Intel Mac 上裝完沒反應、或輸入行為不正常，
+請開一個 [issue](https://github.com/xingyen0613/zhijeida/issues) 回報，附上你的 macOS 版本。
+
+## 從原始碼編譯
+
+**不需要 Xcode**，Command Line Tools 的 `swiftc` 就能編譯。
 
 ```bash
 ./ime/fetch-data.sh    # 取得注音詞庫（見「授權」）
@@ -45,12 +75,20 @@ macOS 的注音輸入法，讓你在中文輸入狀態下直接打英文，不�
 cp -R ime/build/Zhijeida.app ~/Library/Input\ Methods/
 ```
 
-接著**登出再登入**（或重新開機）——macOS 只在登入時掃描輸入法目錄，這一步無法省略，
-Apple 官方也確認目前沒有規避的方法（開發者論壇 thread 775526，Feedback FB23026482）。
+接著重新開機（登出再登入也可以），然後照上面第 4 步加進輸入來源。
 
-登入後到「系統設定 → 鍵盤 → 輸入來源 → +→ 繁體中文」選擇 Zhijeida。
+之後若只改了 Swift 程式碼、沒動 `Info.plist`，重新編譯後 `pkill -f Zhijeida` 即可，
+不必再重開機。
 
-之後若只改了 Swift 程式碼、沒動 `Info.plist`，重新編譯後 `pkill -f Zhijeida` 即可，不必再登出。
+要產生給別人下載的安裝檔：
+
+```bash
+./ime/make-installer.sh    # 產出 ime/build/Zhijeida-<版本>.pkg
+```
+
+這個腳本會用 `./build.sh --universal` 編出雙架構的 binary，把詞庫授權一併放進 bundle，
+再用 `pkgbuild` / `productbuild` 打包成裝到家目錄的安裝檔。
+安裝檔不進版控，發布時上傳到 GitHub Releases。
 
 ## 操作
 
@@ -127,11 +165,15 @@ IMK 會依 controller 實作了哪些方法來決定事件分派，加一個方�
 本專案為 MIT。
 
 注音詞庫資料由 `ime/fetch-data.sh` 從 [McBopomofo](https://github.com/openvanilla/McBopomofo)
-取得，不隨本專案散布：
+取得，原始檔不進本專案版控：
 
 - `BPMFBase.txt`、`phrase.occ`、`exclusion.txt` — MIT License,
   Copyright (c) 2011-2026 Mengjuei Hsieh et al.
 - `BPMFMappings.txt` — 源自 libtabe 的 `tsi.src`，**BSD License**
+
+Releases 提供的安裝檔內含由這些資料編出的 `lm.tsv` 與 `bpmf.tsv`，屬於衍生著作。
+MIT 與 BSD 都允許再散布，條件是隨附授權全文，因此 `LICENSE-McBopomofo.txt`
+一併放在 app bundle 的 `Contents/Resources/` 裡。
 
 自動選詞的作法沿用 McBopomofo 的 Gramambular：unigram 分數搭配 DAG 最短路徑。
 它不看上下文，「測試」能勝過「冊」+「市」是因為常用詞的機率高於兩個單字碰巧相連。

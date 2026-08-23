@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="2">
+    <title>直接打 Zhijeida</title>
+    <organization>com.yen</organization>
+
+    <!-- customize="never"：使用者不需要選元件，一路下一步即可 -->
+    <options customize="never" require-scripts="false" hostArchitectures="arm64,x86_64"/>
+
+    <!-- 只允許裝進使用者家目錄：輸入法要放 ~/Library/Input Methods，
+         不需要管理員權限，也不該碰系統目錄 -->
+    <domains enable_anywhere="false" enable_currentUserHome="true" enable_localSystem="false"/>
+
+    <volume-check>
+        <allowed-os-versions>
+            <os-version min="12.0"/>
+        </allowed-os-versions>
+    </volume-check>
+
+    <welcome file="welcome.html" mime-type="text/html"/>
+    <conclusion file="conclusion.html" mime-type="text/html"/>
+
+    <choices-outline>
+        <line choice="default"/>
+    </choices-outline>
+    <choice id="default" visible="false">
+        <pkg-ref id="com.yen.inputmethod.Zhijeida"/>
+    </choice>
+
+    <!-- RequireRestart：macOS 只在登入時掃描輸入法目錄，裝完必須重開機才會出現。
+         用這個屬性讓 Installer 自己跳重開機按鈕，比寫在說明文字裡可靠。 -->
+    <pkg-ref id="com.yen.inputmethod.Zhijeida" onConclusion="RequireRestart">Zhijeida-component.pkg</pkg-ref>
+</installer-gui-script>
