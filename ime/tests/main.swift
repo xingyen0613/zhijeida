@@ -72,5 +72,20 @@ e.moveCursor(-1)
 let (text, offset) = e.marked(pendingKeys: "")
 check("游標落在詞中間", String(text.prefix(offset)) + "|" + String(text.dropFirst(offset)), "這是一|個")
 
+print("\n判錯時選回原樣")
+var f = typed("284")
+let fList = f.candidatesAtCursor()
+check("中文候選含原始按鍵", fList.contains { $0.word == "284" } ? "yes" : "no", "yes")
+check("原始按鍵排在單字之前",
+      (fList.firstIndex { $0.isLiteral } ?? 99) < (fList.firstIndex { $0.span == 1 && !$0.isLiteral } ?? 99)
+        ? "yes" : "no", "yes")
+if let literal = fList.first(where: { $0.isLiteral }) {
+    f.choose(literal)
+    check("選回數字", f.text, "284")
+}
+var g = typed("cpu ")
+let gList = g.candidatesAtCursor()
+check("英文段落也有候選", gList.isEmpty ? "no" : "yes", "yes")
+
 print(failures == 0 ? "\n全部通過" : "\n\(failures) 項失敗")
 exit(failures == 0 ? 0 : 1)

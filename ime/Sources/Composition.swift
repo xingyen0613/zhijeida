@@ -27,6 +27,8 @@ struct Candidate {
     let start: Int
     let span: Int
     let score: Double
+    /// 原始按鍵本身（數字或英文），供判錯時選回去
+    var isLiteral: Bool = false
 }
 
 /// 尚未上屏的組字內容。
@@ -89,7 +91,9 @@ struct Composition {
         var i = 0
         while i < items.count {
             guard items[i].isChinese else {
-                result.append(Chunk(text: items[i].keys, isChinese: false, range: i..<(i + 1)))
+                let overridden = overrides[i]?.word
+                result.append(Chunk(text: overridden ?? items[i].keys,
+                                    isChinese: overridden != nil, range: i..<(i + 1)))
                 i += 1
                 continue
             }
@@ -112,10 +116,10 @@ struct Composition {
 
     // MARK: - 選字
 
-    /// 選字針對的音節：游標左側那個；游標在最前面時改看右側第一個
+    /// 選字針對的位置：游標左側那個；游標在最前面時改看右側第一個
     private var targetIndex: Int? {
         let idx = cursor > 0 ? cursor - 1 : 0
-        guard idx >= 0, idx < items.count, items[idx].isChinese else { return nil }
+        guard idx >= 0, idx < items.count else { return nil }
         return idx
     }
 
@@ -143,6 +147,18 @@ struct Composition {
     /// 常用詞擠到幾十位之後。詞與單字各自依分數由高到低。
     func candidatesAtCursor() -> [Candidate] {
         guard let target = targetIndex else { return [] }
+        let literal = items[target].keys
+
+        // 英文段落：列出這串按鍵可能對應的中文，讓判錯時能改回來
+        guard items[target].isChinese else {
+            var list = LanguageModel.candidates(literal).map {
+                Candidate(word: $0.word, start: target, span: 1, score: $0.score)
+            }
+            list.append(Candidate(word: literal, start: target, span: 1,
+                                  score: 0, isLiteral: true))
+            return list
+        }
+
         var result: [Candidate] = []
         for span in 1...LanguageModel.maxSpan {
             for start in max(0, target - span + 1)...target {
@@ -162,10 +178,17 @@ struct Composition {
             if let existing = best[candidate.word], existing.score >= candidate.score { continue }
             best[candidate.word] = candidate
         }
-        return best.values.sorted {
+        var list = best.values.sorted {
             if ($0.span == 1) != ($1.span == 1) { return $0.span > $1.span }
             return $0.score > $1.score
         }
+        // 原始按鍵排在多字詞之後、同音單字之前，判錯時容易找到
+        if !list.contains(where: { $0.word == literal }) {
+            let insertAt = list.firstIndex { $0.span == 1 } ?? list.count
+            list.insert(Candidate(word: literal, start: target, span: 1,
+                                  score: 0, isLiteral: true), at: insertAt)
+        }
+        return list
     }
 
     mutating func choose(_ candidate: Candidate) {
