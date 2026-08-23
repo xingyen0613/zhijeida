@@ -1,9 +1,14 @@
 """中英混輸判別器：輸入原始按鍵序列，切分並判斷中文注音 / 英文單字。
 
 前提：使用者會打聲調，一聲直接按空白鍵。
-聲調鍵(3467)與空白是天然的單元邊界；單元內部可能英文與注音黏著，需再切分。
+
+由此得到兩個約束，判別幾乎不需要詞典：
+1. 聲調鍵(3467)與空白是單元邊界。
+2. 一個單元內中文最多一個音節 —— 若有兩個，第一個後面就會有聲調鍵或空白。
+
+所以「整串構不成單一合法音節」即可判定為英文（cpu=ㄏㄣㄧ、mrvl、goog）。
+英文與注音黏著時（macbooknji3），從尾部取最長合法音節，前綴即英文。
 """
-import re
 import sys
 
 KEY = {
@@ -27,9 +32,9 @@ FINAL = set('ㄚㄛㄜㄝㄞㄟㄠㄡㄢㄣㄤㄥㄦ')
 SOLO_INITIAL = set('ㄓㄔㄕㄖㄗㄘㄙ')
 
 
-def read_syllable(keys, i):
-    """從 keys[i] 起貪婪讀一個合法注音音節，回傳 (結束位置, 注音) 或 None"""
-    j = i
+def as_syllable(keys):
+    """整串 keys 是否恰好構成單一合法注音音節（可帶聲調）"""
+    j = 0
     ini = med = fin = ''
     if j < len(keys) and KEY.get(keys[j]) in INITIAL:
         ini = KEY[keys[j]]; j += 1
@@ -37,58 +42,14 @@ def read_syllable(keys, i):
         med = KEY[keys[j]]; j += 1
     if j < len(keys) and KEY.get(keys[j]) in FINAL:
         fin = KEY[keys[j]]; j += 1
-    if j == i:
-        return None
-    if not (med or fin) and ini not in SOLO_INITIAL:
-        return None
     tone = ''
     if j < len(keys) and keys[j] in TONE:
         tone = TONE[keys[j]]; j += 1
-    return j, ini + med + fin + tone
-
-
-def load_dict():
-    words = set()
-    with open('/usr/share/dict/words', encoding='utf-8', errors='ignore') as f:
-        for line in f:
-            w = line.strip().lower()
-            if len(w) >= 2 and w.isalpha():
-                words.add(w)
-    words |= {'i', 'a'}
-    return words
-
-
-def segment(unit, endict):
-    """把一個輸入單元切成 [(類型, 內容)]。DP 取 token 數最少的切法。"""
-    n = len(unit)
-    best = [None] * (n + 1)
-    best[0] = (0, [])
-    for i in range(n):
-        if best[i] is None:
-            continue
-        cost, path = best[i]
-        syl = read_syllable(unit, i)
-        if syl:
-            j, zh = syl
-            cand = (cost + 1, path + [('ZH', unit[i:j], zh)])
-            if best[j] is None or cand[0] < best[j][0]:
-                best[j] = cand
-        for j in range(n, i + 1, -1):
-            w = unit[i:j]
-            if w.isalpha() and w in endict:
-                cand = (cost + 1, path + [('EN', w, '')])
-                if best[j] is None or cand[0] < best[j][0]:
-                    best[j] = cand
-                break
-    if best[n]:
-        return best[n][1]
-    # 無法完整解析：整個單元的字母前綴視為英文，其餘照原樣
-    m = re.match(r'^[a-z]+', unit)
-    if m:
-        head = m.group()
-        rest = unit[len(head):]
-        return [('EN', head, '')] + (segment(rest, endict) if rest else [])
-    return [('EN', unit, '')]
+    if j != len(keys) or not (ini or med or fin):
+        return None
+    if not (med or fin) and ini not in SOLO_INITIAL:
+        return None
+    return ini + med + fin + tone
 
 
 def units(line):
@@ -107,17 +68,48 @@ def units(line):
     return out
 
 
+def load_dict():
+    """系統英文詞典，只用於全字母單元的邊界判斷"""
+    words = set()
+    with open('/usr/share/dict/words', encoding='utf-8', errors='ignore') as f:
+        for line in f:
+            w = line.strip().lower()
+            if len(w) >= 2 and w.isalpha():
+                words.add(w)
+    try:
+        with open('userdict.txt', encoding='utf-8') as f:
+            words |= {w.strip().lower() for w in f if w.strip()}
+    except FileNotFoundError:
+        pass
+    return words | {'i', 'a'}
+
+
+def classify(unit, endict):
+    zh = as_syllable(unit)
+    if zh:
+        return [('ZH', unit, zh)]
+    has_nonalpha = not unit.isalpha()
+    if unit.isalpha() and unit in endict:
+        return [('EN', unit, '')]
+    # 從尾部取最長合法音節，前綴視為英文
+    for i in range(1, len(unit)):
+        tail = as_syllable(unit[i:])
+        if tail:
+            head = unit[:i]
+            if has_nonalpha or head in endict:
+                return [('EN', head, ''), ('ZH', unit[i:], tail)]
+    return [('EN', unit, '')]
+
+
 def main():
     endict = load_dict()
-    src = open(sys.argv[1], encoding='utf-8') if len(sys.argv) > 1 else sys.stdin
-    with src as f:
+    with open(sys.argv[1], encoding='utf-8') as f:
         for line in f:
             line = line.strip().lower()
             if not line:
                 continue
-            toks = [t for u in units(line) for t in segment(u, endict)]
-            print(' '.join(f'<{k}>{v}' if k == 'EN' else zh for k, v, zh in toks))
-            print()
+            toks = [t for u in units(line) for t in classify(u, endict)]
+            print(' '.join(f'<{k}>{v}' if k == 'EN' else z for k, v, z in toks))
 
 
 if __name__ == '__main__':
