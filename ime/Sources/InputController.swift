@@ -42,8 +42,9 @@ class SmartBopomofoInputController: IMKInputController {
 
         pending.append(ch)
 
-        // 聲調鍵標記一個音節結束
-        if Bopomofo.tone[ch] != nil {
+        // 聲調鍵標記一個音節結束。但數字鍵同時是聲調鍵，
+        // 打 0613 這種數字串時尾段不是中文，就不該結算。
+        if Bopomofo.tone[ch] != nil, Bopomofo.split(pending).last?.isChinese == true {
             flushPending()
         }
         update(client)
@@ -97,6 +98,8 @@ class SmartBopomofoInputController: IMKInputController {
 
         case #selector(NSResponder.moveDown(_:)):
             if candidatesVisible { candidatesWindow?.moveDown(nil); return true }
+            // 沒有在組字就讓應用程式自己處理（換行、移動游標）
+            guard !pending.isEmpty || !composition.isEmpty else { return false }
             flushPending()
             shownCandidates = composition.candidatesAtCursor()
             update(client)
@@ -110,7 +113,7 @@ class SmartBopomofoInputController: IMKInputController {
 
         case #selector(NSResponder.moveUp(_:)):
             if candidatesVisible { candidatesWindow?.moveUp(nil); return true }
-            return false
+            return false   // 不在選字就放行
 
         case #selector(NSResponder.moveLeft(_:)):
             if candidatesVisible { candidatesWindow?.moveLeft(nil); return true }

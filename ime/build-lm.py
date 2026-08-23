@@ -45,14 +45,19 @@ with open(f'{D}/phrase.occ', encoding='utf-8') as f:
 entries = defaultdict(list)   # 按鍵序列 -> [(詞, 次數)]
 
 # 單字：BPMFBase 第 4 欄就是按鍵
-BPMF_RANGE = lambda s: all('ㄅ' <= c <= 'ㄯ' for c in s)
+# 資料把注音符號與聲調符號本身也列為可輸入的字（ㄝ / ˇ / ˊ …），
+# 留著會讓單一聲母或聲調鍵變成「合法音節」，切壞英文詞尾與數字串。
+TONE_MARKS = set('ˊˇˋ˙')
+def is_symbol_itself(s):
+    return all('ㄅ' <= c <= 'ㄯ' or c in TONE_MARKS for c in s)
+BPMF_RANGE = is_symbol_itself
 with open(f'{D}/BPMFBase.txt', encoding='utf-8') as f:
     for line in f:
         p = line.split()
         if len(p) != 5 or not p[4].startswith('big5'):
             continue
         han, keys = p[0], p[3]
-        if BPMF_RANGE(han):        # 注音符號本身不算字
+        if is_symbol_itself(han):   # 注音／聲調符號本身不算字
             continue
         entries[keys].append((han, occ.get(han, 0)))
 
@@ -63,7 +68,7 @@ with open(f'{D}/BPMFMappings.txt', encoding='utf-8') as f:
         if len(p) < 3:
             continue
         word, syllables = p[0], p[1:]
-        if len(word) != len(syllables):
+        if len(word) != len(syllables) or is_symbol_itself(word):
             continue
         keys = [to_keys(s) for s in syllables]
         if any(k is None for k in keys):
@@ -87,6 +92,21 @@ for keys, lst in entries.items():
 out = f'{D}/lm.tsv'
 with open(out, 'w', encoding='utf-8') as f:
     f.write('\n'.join(sorted(lines)))
+
+# 音節判定表：只收單音節，供中英判別使用
+syllables_only = {}
+with open(f'{D}/BPMFBase.txt', encoding='utf-8') as f:
+    for line in f:
+        p = line.split()
+        if len(p) != 5 or not p[4].startswith('big5'):
+            continue
+        if is_symbol_itself(p[0]):
+            continue
+        syllables_only.setdefault(p[3], []).append(p[0])
+with open(f'{D}/bpmf.tsv', 'w', encoding='utf-8') as f:
+    for k, v in sorted(syllables_only.items()):
+        f.write(f"{k}\t{''.join(v)}\n")
+print(f'音節判定表 {len(syllables_only)} 個音節')
 
 print(f'按鍵序列 {len(entries)} 個，詞條 {sum(len(v) for v in entries.values())} 筆')
 print(f'總出現次數 {total}')

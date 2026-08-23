@@ -73,12 +73,18 @@ enum Bopomofo {
     /// 英文與注音之間沒有分隔符（macbooknji3），從尾部取最長合法音節，前綴即英文。
     static func split(_ keys: String) -> [(isChinese: Bool, keys: String)] {
         if isSyllable(keys) { return [(true, keys)] }
+        // 全是數字又不成音節，就是使用者在打數字（0613、手機號碼），
+        // 不要從尾部切出「06」=ㄢˊ 這種音節。注意「18」=ㄅㄚ=八 這類
+        // 全數字的合法音節已在上一行認定為中文。
+        if keys.allSatisfy(\.isNumber) { return [(false, keys)] }
         // 中文音節後必有聲調鍵或空白，所以全字母的單元不會是「英文+注音」黏著
         let hasNonLetter = keys.contains { !$0.isLetter }
         if hasNonLetter, keys.count > 1 {
             for offset in 1..<keys.count {
                 let idx = keys.index(keys.startIndex, offsetBy: offset)
                 let tail = String(keys[idx...])
+                // 尾段全是數字時視為數字的一部分（xingyen0613 的 06 不是ㄢˊ）
+                if tail.allSatisfy(\.isNumber) { continue }
                 if isSyllable(tail) {
                     return [(false, String(keys[..<idx])), (true, tail)]
                 }
