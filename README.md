@@ -1,179 +1,152 @@
-# zhijeida 直接打
+# zhijeida (直接打)
 
-macOS 的注音輸入法，讓你在中文輸入狀態下直接打英文，不必切換輸入法。
+English | [繁體中文](README.zh-TW.md)
 
-打 `hk4g4` 出「測試」，打 `good` 出 `good`——輸入法自己判斷哪個是哪個。
+A Zhuyin (Bopomofo) input method for macOS that lets you type English directly while in Chinese input mode — no need to switch input methods.
 
-## 為什麼可行
+Type `hk4g4` to get 測試 (test), type `good` to get `good` — the input method figures out which is which on its own.
 
-在標準大千鍵盤下，26 個英文字母全部對應到注音符號，所以任何英文單字同時也是一串注音。
-乍看無法區分，但只要使用者**會打聲調、一聲按空白**，就會出現兩個很強的約束：
+## Why this works
 
-1. 聲調鍵（3467）與空白是天然的邊界。
-2. **一個單元內中文最多只有一個音節**——若有兩個，第一個後面就會出現聲調鍵或空白。
+On the standard Dayi (大千) keyboard layout, all 26 English letters map to Zhuyin symbols, so any English word is simultaneously a string of Zhuyin. At first glance the two seem indistinguishable, but if the user **types tone marks, with the first tone bound to the space bar**, two strong constraints emerge:
 
-第 2 點是關鍵。它讓「整串構不成單一合法音節」直接成為英文的證據：
+1. Tone keys (`3467`) and space are natural boundaries.
+2. **A single unit can contain at most one Chinese syllable** — if there are two, a tone key or space must appear after the first one.
 
-| 按鍵 | 注音 | 判定 |
+Point 2 is the key insight. It turns "this string can't form a single valid syllable" directly into evidence that it's English:
+
+| Keystrokes | Zhuyin | Verdict |
 |---|---|---|
-| `cpu` | ㄏㄣㄧ | 不是合法音節 → 英文 |
-| `sdk` `api` `npm` | — | 同上 |
-| `d9` | ㄎㄞ | 合法音節 → 中文「開」 |
-| `284` | ㄉㄚˋ | 全是數字，但仍是合法音節 → 中文「大」 |
+| `cpu` | ㄏㄣㄧ | Not a valid syllable → English |
+| `sdk` `api` `npm` | — | Same as above |
+| `d9` | ㄎㄞ | Valid syllable → Chinese 開 (open) |
+| `284` | ㄉㄚˋ | All digits, but still a valid syllable → Chinese 大 (big) |
 
-以英文高頻詞測試，真正無法判別的只剩 `up`（ㄧㄣ 因/音）與 `i`（ㄛ 喔）兩個詞。
+Testing against high-frequency English words, only two remain genuinely ambiguous: `up` (ㄧㄣ, as in 因/音) and `i` (ㄛ, as in 喔).
 
-不打聲調的使用者不適用這套規則，需要另一套基於語言模型的做法。
+This rule doesn't apply to users who don't type tone marks — that case needs a different, language-model-based approach.
 
-## 功能
+## Features
 
-- **中英混打**：`macbooknji3` 自動切成 `macbook` + 「所」，中間不需要分隔符
-- **自動選詞**：`hk4g4` 直接出「測試」而不是「冊市」
-- **逐字修正**：組字區可移動游標、單獨替換某一個字、句中插入
-- **候選涵蓋完整**：同音詞、同音單字、原始按鍵（判錯時選回數字或英文）都在同一份清單
-- **學習你的用字**：手動選過的詞會提高權重，下次自動選字偏向它
-- **數字與符號**：`1234567890` 不會被讀成注音；中文後的 `,` 自動變「，」，英文後維持半形
+- **Mixed Chinese/English typing**: `macbooknji3` automatically splits into `macbook` + 所, no separator needed
+- **Automatic word selection**: `hk4g4` directly produces 測試 rather than 冊市
+- **Character-by-character correction**: move the cursor within the composition buffer, replace a single character, or insert mid-sentence
+- **Comprehensive candidates**: homophone words, homophone single characters, and the raw keystrokes (to fall back to digits or English when the guess is wrong) all appear in one list
+- **Learns your usage**: manually selected words get a higher weight, so future auto-selection favors them
+- **Numbers and punctuation**: `1234567890` is never read as Zhuyin; a `,` after Chinese text becomes `，` automatically, while it stays half-width after English text
 
-## 下載安裝
+## Download and install
 
-到 [Releases](https://github.com/xingyen0613/zhijeida/releases) 下載 **`Zhijeida-0.1.pkg`**，
-只有這一個檔案，Apple Silicon 與 Intel 共用。需要 macOS 12 以上。
+Download **`Zhijeida-0.1.pkg`** from [Releases](https://github.com/xingyen0613/zhijeida/releases) — it's the only file you need, shared between Apple Silicon and Intel. Requires macOS 12 or later.
 
-**1. 打開安裝檔。** 第一次打開會被系統擋下，說「無法打開，因為無法驗證開發者」。
-這個輸入法沒有 Apple 的開發者簽章（簽章與公證需要付費的 Apple Developer Program），
-不是檔案有問題。到「**系統設定 → 隱私權與安全性**」往下捲，會看到剛才被擋的檔案，
-按「**仍要打開**」，再打開一次安裝檔即可。
+**1. Open the installer.** The first time, macOS will block it with "cannot be opened because the developer cannot be verified." This input method isn't signed with an Apple Developer certificate (code signing and notarization require a paid Apple Developer Program membership) — the file itself is fine. Go to **System Settings → Privacy & Security**, scroll down to find the blocked file, click **Open Anyway**, then open the installer again.
 
-**2. 一路按「繼續」完成安裝。** 輸入法會裝進你自己的家目錄
-（`~/Library/Input Methods`），不需要管理員密碼，也不會動到系統檔案。
+**2. Click "Continue" through the installer.** The input method installs into your own home directory (`~/Library/Input Methods`) — no administrator password needed, and it never touches system files.
 
-**3. 重新開機。** 安裝程式最後會請你重開機。macOS 只在開機登入時掃描輸入法目錄，
-這一步無法省略，Apple 官方也確認目前沒有規避的方法
-（開發者論壇 thread 775526，Feedback FB23026482）。
+**3. Restart your Mac.** The installer will ask you to restart at the end. macOS only scans the input method directory at login, so this step can't be skipped — Apple has confirmed there is currently no way around it (Developer Forums thread 775526, Feedback FB23026482).
 
-**4. 加進輸入來源。** 重開機後到「**系統設定 → 鍵盤 → 輸入來源 → 編輯**」，
-按左下角的 **+**，選「**繁體中文**」，在清單裡找到 **Zhijeida** 並加入。
+**4. Add it as an input source.** After restarting, go to **System Settings → Keyboard → Input Sources → Edit**, click the **+** in the bottom left, choose **Traditional Chinese**, and add **Zhijeida** from the list.
 
-之後用選單列右上角的輸入法選單、或 `Control + Space` 切換過去，就能開始打字。
-要移除的話，刪掉 `~/Library/Input Methods/Zhijeida.app` 再重開機。
+You can then switch to it from the input method menu in the top-right menu bar, or with `Control + Space`. To remove it, delete `~/Library/Input Methods/Zhijeida.app` and restart.
 
-### Intel Mac
+### Intel Macs
 
-安裝檔是 universal binary，`arm64` 與 `x86_64` 兩個架構都包在裡面。`x86_64` 那一半
-已在 Apple Silicon 上透過 Rosetta 確認能正常啟動、載入語言模型並正確查到詞條，
-但**沒有在真正的 Intel 機器上測過**。如果你在 Intel Mac 上裝完沒反應、或輸入行為不正常，
-請開一個 [issue](https://github.com/xingyen0613/zhijeida/issues) 回報，附上你的 macOS 版本。
+The installer is a universal binary containing both `arm64` and `x86_64` architectures. The `x86_64` half has been verified to launch, load the language model, and look up entries correctly on Apple Silicon via Rosetta, but it **has not been tested on real Intel hardware**. If it installs but doesn't respond, or behaves incorrectly, on an Intel Mac, please open an [issue](https://github.com/xingyen0613/zhijeida/issues) with your macOS version.
 
-## 從原始碼編譯
+## Building from source
 
-**不需要 Xcode**，Command Line Tools 的 `swiftc` 就能編譯。
+**No Xcode required** — the `swiftc` that ships with Command Line Tools is enough.
 
 ```bash
-./ime/fetch-data.sh    # 取得注音詞庫（見「授權」）
-./ime/build-lm.py      # 編譯語言模型
-./ime/build.sh         # 編譯輸入法
+./ime/fetch-data.sh    # fetch the Zhuyin word database (see "License")
+./ime/build-lm.py      # build the language model
+./ime/build.sh         # build the input method
 cp -R ime/build/Zhijeida.app ~/Library/Input\ Methods/
 ```
 
-接著重新開機（登出再登入也可以），然後照上面第 4 步加進輸入來源。
+Then restart (logging out and back in also works), and add it as an input source following step 4 above.
 
-之後若只改了 Swift 程式碼、沒動 `Info.plist`，重新編譯後 `pkill -f Zhijeida` 即可，
-不必再重開機。
+If you only change Swift code afterward and don't touch `Info.plist`, rebuilding and running `pkill -f Zhijeida` is enough — no restart needed.
 
-要產生給別人下載的安裝檔：
+To produce an installer for others to download:
 
 ```bash
-./ime/make-installer.sh    # 產出 ime/build/Zhijeida-<版本>.pkg
+./ime/make-installer.sh    # produces ime/build/Zhijeida-<version>.pkg
 ```
 
-這個腳本會用 `./build.sh --universal` 編出雙架構的 binary，把詞庫授權一併放進 bundle，
-再用 `pkgbuild` / `productbuild` 打包成裝到家目錄的安裝檔。
-安裝檔不進版控，發布時上傳到 GitHub Releases。
+This script builds a dual-architecture binary via `./build.sh --universal`, bundles the word database license alongside it, then packages everything into a home-directory installer with `pkgbuild` / `productbuild`. Installers aren't checked into version control — they're uploaded to GitHub Releases when published.
 
-## 操作
+## Usage
 
-| 按鍵 | 行為 |
+| Key | Behavior |
 |---|---|
-| `← →` | 以字為單位移動插入點 |
-| `Home` / `End` | 跳到組字區頭尾 |
-| `↓` | 對游標左側那個字叫出候選 |
-| `↑↓` `←→` | 候選清單內移動 |
-| `Enter` | 清單開著＝選定；否則送出組字區 |
-| 數字鍵 | 清單開著時直接選第 N 個 |
-| `Backspace` / `fn+Delete` | 刪除游標左側／右側一個 |
-| `Esc` | 清空組字區 |
+| `← →` | Move the insertion point by character |
+| `Home` / `End` | Jump to the start/end of the composition buffer |
+| `↓` | Bring up candidates for the character to the left of the cursor |
+| `↑↓` `←→` | Navigate within the candidate list |
+| `Enter` | Confirms selection if the list is open; otherwise commits the composition buffer |
+| Number keys | Select the Nth candidate directly while the list is open |
+| `Backspace` / `fn+Delete` | Delete one character to the left/right of the cursor |
+| `Esc` | Clear the composition buffer |
 
-候選清單順序：多字詞 → 原始按鍵 → 同音單字，各組內依詞頻排序。
+Candidate list order: multi-character words → raw keystrokes → homophone single characters, each group sorted by frequency.
 
-## 開發
-
-```bash
-./ime/run-tests.sh     # 49 項回歸測試，不需安裝輸入法
-```
-
-測試涵蓋中英判別、分詞、數字處理、候選排序、組字區編輯與使用者習慣學習。
-`judge.py` 是最初的離線判別器原型，保留作為規則的參考實作。
-
-除錯日誌寫在 `~/Library/Logs/Zhijeida.log`（IMK 進程的 `NSLog` 不一定進得了
-unified log，所以另外寫一份檔案）。
-
-**預設只記錄啟動與載入事件，不含任何輸入內容。** 需要追查判別問題時才開啟：
+## Development
 
 ```bash
-launchctl setenv ZHIJEIDA_DEBUG 1     # 開啟後會記錄實際輸入的文字
-launchctl unsetenv ZHIJEIDA_DEBUG     # 關閉
+./ime/run-tests.sh     # 49 regression tests, no need to install the input method
 ```
 
-### 踩過的坑
+Tests cover Chinese/English disambiguation, word segmentation, number handling, candidate ranking, composition buffer editing, and learning from user habits. `judge.py` is the original offline disambiguation prototype, kept as a reference implementation of the rules.
 
-IMK 會依 controller 實作了哪些方法來決定事件分派，加一個方法不只是多一條路，
-而是改變既有的路。以下三者都曾導致按鍵完全不進判別邏輯：
+Debug logs are written to `~/Library/Logs/Zhijeida.log` (an IMK process's `NSLog` doesn't reliably reach the unified log, so a separate file is kept).
 
-- override `handle(_:client:)` → IMK 不再呼叫 `inputText`
-- 實作 `inputText(_:key:modifiers:client:)` → 方向鍵與 Enter 也被送進文字路徑
-- 在 `inputText` 或 `didCommand` 回傳 `false` → 按鍵落到應用程式手上，組字區被清空
+**By default, only startup and loading events are logged — no input content.** Enable detailed logging only when debugging a disambiguation issue:
 
-另外 `NSApp.currentEvent` 在 IMK 進程中拿不到事件（按鍵經 IPC 送入，
-不走 NSApplication 的事件循環），所以無法用它讀修飾鍵。
+```bash
+launchctl setenv ZHIJEIDA_DEBUG 1     # once enabled, actual typed text is logged
+launchctl unsetenv ZHIJEIDA_DEBUG     # disable
+```
 
-## 隱私
+### Pitfalls encountered
 
-選字習慣存放在使用者自己的目錄，不在專案內：
+IMK decides how to dispatch events based on which methods the controller implements — adding a method doesn't just add a new path, it changes the existing one. All three of the following caused keystrokes to stop reaching the disambiguation logic entirely:
+
+- Overriding `handle(_:client:)` → IMK stops calling `inputText`
+- Implementing `inputText(_:key:modifiers:client:)` → arrow keys and Enter also get routed into the text path
+- Returning `false` from `inputText` or `didCommand` → the keystroke falls through to the application, and the composition buffer gets cleared
+
+Also, `NSApp.currentEvent` is unavailable inside an IMK process (keystrokes arrive via IPC, not through the NSApplication event loop), so it can't be used to read modifier keys.
+
+## Privacy
+
+Word selection history is stored in the user's own directory, not inside the project:
 
 ```
 ~/Library/Application Support/Zhijeida/user-phrases.tsv
 ```
 
-不是靠 `.gitignore` 擋——檔案根本不在 repo 裡。每個使用者帳號各自獨立，
-要清除直接刪掉該檔案即可。輸入法不連網、不上傳任何內容。
+This isn't enforced via `.gitignore` — the file simply never exists inside the repo. Each user account has its own independent file; delete it to clear the history. The input method never connects to the network and never uploads anything.
 
-輸入法看得到使用者輸入的一切，因此：
+The input method can see everything the user types, so:
 
-- 日誌**預設不記錄輸入內容**，需以 `ZHIJEIDA_DEBUG=1` 明確開啟
-- 使用者詞彙與日誌都以 `0600` 建立，同機其他帳號無法讀取
-- 密碼欄位由 macOS 的 Secure Input 保護，第三方輸入法在該狀態下會被系統停用
+- Logs **do not record input content by default** — it must be explicitly enabled with `ZHIJEIDA_DEBUG=1`
+- Both the user word file and the log file are created with `0600` permissions, unreadable by other accounts on the same machine
+- Password fields are protected by macOS Secure Input, which disables third-party input methods while active
 
-`ime/fetch-data.sh` 會從 GitHub 下載詞庫資料，來源固定在特定 commit
-（見腳本中的 `MCBOPOMOFO_COMMIT`），因此不同時間取得的資料完全一致，
-上游日後的變動不會影響既有建置。要更新詞庫時換掉該 SHA 並重跑測試。
+`ime/fetch-data.sh` downloads the word database from GitHub, pinned to a specific commit (see `MCBOPOMOFO_COMMIT` in the script), so the data fetched is identical no matter when you run it, and upstream changes never affect an existing build. To update the database, change that SHA and rerun the tests.
 
-輸入法本身在執行期不連網。詞庫資料是純文字對照表，解析過程不涉及
-程式碼執行，因此即使資料遭竄改也只會影響選字結果，不會危及系統。
+The input method itself never connects to the network at runtime. The word database is a plain-text lookup table, and parsing it never involves code execution — so even if the data were tampered with, it could only affect word selection results, not compromise the system.
 
-## 授權
+## License
 
-本專案為 MIT。
+This project is MIT licensed.
 
-注音詞庫資料由 `ime/fetch-data.sh` 從 [McBopomofo](https://github.com/openvanilla/McBopomofo)
-取得，原始檔不進本專案版控：
+The Zhuyin word database is fetched by `ime/fetch-data.sh` from [McBopomofo](https://github.com/openvanilla/McBopomofo); the source files are not checked into this project:
 
-- `BPMFBase.txt`、`phrase.occ`、`exclusion.txt` — MIT License,
-  Copyright (c) 2011-2026 Mengjuei Hsieh et al.
-- `BPMFMappings.txt` — 源自 libtabe 的 `tsi.src`，**BSD License**
+- `BPMFBase.txt`, `phrase.occ`, `exclusion.txt` — MIT License, Copyright (c) 2011-2026 Mengjuei Hsieh et al.
+- `BPMFMappings.txt` — derived from libtabe's `tsi.src`, **BSD License**
 
-Releases 提供的安裝檔內含由這些資料編出的 `lm.tsv` 與 `bpmf.tsv`，屬於衍生著作。
-MIT 與 BSD 都允許再散布，條件是隨附授權全文，因此 `LICENSE-McBopomofo.txt`
-一併放在 app bundle 的 `Contents/Resources/` 裡。
+The installers provided in Releases include `lm.tsv` and `bpmf.tsv` compiled from this data, which are derivative works. Both MIT and BSD permit redistribution provided the full license text is included, so `LICENSE-McBopomofo.txt` is bundled into the app bundle's `Contents/Resources/`.
 
-自動選詞的作法沿用 McBopomofo 的 Gramambular：unigram 分數搭配 DAG 最短路徑。
-它不看上下文，「測試」能勝過「冊」+「市」是因為常用詞的機率高於兩個單字碰巧相連。
+Automatic word selection follows McBopomofo's Gramambular approach: unigram scores combined with a DAG shortest-path search. It doesn't consider context — 測試 (test) beats 冊 + 市 simply because the probability of a common word is higher than that of two single characters happening to appear next to each other.
