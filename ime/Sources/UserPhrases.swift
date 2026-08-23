@@ -52,7 +52,7 @@ enum UserPhrases {
     /// 記錄一次使用者的明確選擇
     static func record(keys: String, word: String) {
         counts[keys, default: [:]][word, default: 0] += 1
-        imeLog("記住選擇 \(keys) -> \(word)（第 \(counts[keys]![word]!) 次）")
+        imeDebug("記住選擇 \(keys) -> \(word)（第 \(counts[keys]![word]!) 次）")
         save()
     }
 
@@ -61,6 +61,9 @@ enum UserPhrases {
             words.map { "\(keys)\t\($0.key)\t\($0.value)" }
         }.sorted().joined(separator: "\n")
         try? text.write(to: fileURL, atomically: true, encoding: .utf8)
+        // 這是使用者的用字記錄，不該讓同機其他帳號讀取
+        try? FileManager.default.setAttributes([.posixPermissions: 0o600],
+                                               ofItemAtPath: fileURL.path)
     }
 
     /// 清除所有使用者記錄

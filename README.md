@@ -76,8 +76,15 @@ Apple 官方也確認目前沒有規避的方法（開發者論壇 thread 775526
 測試涵蓋中英判別、分詞、數字處理、候選排序、組字區編輯與使用者習慣學習。
 `judge.py` 是最初的離線判別器原型，保留作為規則的參考實作。
 
-除錯日誌寫在 `~/Library/Logs/Zhijeida.log`。IMK 進程的 `NSLog` 不一定進得了
-unified log，所以另外寫一份檔案。
+除錯日誌寫在 `~/Library/Logs/Zhijeida.log`（IMK 進程的 `NSLog` 不一定進得了
+unified log，所以另外寫一份檔案）。
+
+**預設只記錄啟動與載入事件，不含任何輸入內容。** 需要追查判別問題時才開啟：
+
+```bash
+launchctl setenv ZHIJEIDA_DEBUG 1     # 開啟後會記錄實際輸入的文字
+launchctl unsetenv ZHIJEIDA_DEBUG     # 關閉
+```
 
 ### 踩過的坑
 
@@ -101,6 +108,15 @@ IMK 會依 controller 實作了哪些方法來決定事件分派，加一個方�
 
 不是靠 `.gitignore` 擋——檔案根本不在 repo 裡。每個使用者帳號各自獨立，
 要清除直接刪掉該檔案即可。輸入法不連網、不上傳任何內容。
+
+輸入法看得到使用者輸入的一切，因此：
+
+- 日誌**預設不記錄輸入內容**，需以 `ZHIJEIDA_DEBUG=1` 明確開啟
+- 使用者詞彙與日誌都以 `0600` 建立，同機其他帳號無法讀取
+- 密碼欄位由 macOS 的 Secure Input 保護，第三方輸入法在該狀態下會被系統停用
+
+`ime/fetch-data.sh` 會從 GitHub 下載詞庫資料，沒有做雜湊校驗，
+使用時請自行確認來源。輸入法本身在執行期不連網。
 
 ## 授權
 

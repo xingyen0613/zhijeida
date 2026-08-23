@@ -27,7 +27,7 @@ class ZhijeidaInputController: IMKInputController {
             let isFunctionKey = (0xF700...0xF8FF).contains(scalar.value)
             let isControl = scalar.value < 0x20 || scalar.value == 0x7F
             if isFunctionKey || isControl {
-                imeLog("忽略非文字按鍵 U+\(String(scalar.value, radix: 16))")
+                imeDebug("忽略非文字按鍵 U+\(String(scalar.value, radix: 16))")
                 return !composition.isEmpty || !pending.isEmpty
             }
         }
@@ -44,7 +44,7 @@ class ZhijeidaInputController: IMKInputController {
         // 看前一個字是中文還是英文更穩，也更貼近實際書寫習慣。
         if pending.isEmpty, let full = Symbols.full(s),
            composition.precededByChinese || (composition.isEmpty && lastCommitWasChinese) {
-            imeLog("中文後的符號 \(s) -> \(full)")
+            imeDebug("中文後的符號 \(s) -> \(full)")
             composition.insert(keys: full, isChinese: false)
             update(client)
             return true
@@ -84,7 +84,7 @@ class ZhijeidaInputController: IMKInputController {
     }
 
     override func didCommand(by aSelector: Selector!, client sender: Any!) -> Bool {
-        imeLog("command \(aSelector.map(NSStringFromSelector) ?? "nil") pending=\(pending) items=\(composition.itemCount)")
+        imeDebug("command \(aSelector.map(NSStringFromSelector) ?? "nil") pending=\(pending) items=\(composition.itemCount)")
         guard let client = sender as? IMKTextInput else { return false }
 
         switch aSelector {
@@ -142,7 +142,7 @@ class ZhijeidaInputController: IMKInputController {
             guard !pending.isEmpty || !composition.isEmpty else { return false }
             flushPending()
             shownCandidates = composition.candidatesAtCursor()
-            imeLog("候選 \(shownCandidates.count) 項：\(shownCandidates.prefix(5).map(\.word).joined(separator: "/"))")
+            imeDebug("候選 \(shownCandidates.count) 項：\(shownCandidates.prefix(5).map(\.word).joined(separator: "/"))")
             update(client)
             // 即使沒有候選也要吃掉這個按鍵，否則組字區會被應用程式清掉
             guard !shownCandidates.isEmpty else {
@@ -203,10 +203,10 @@ class ZhijeidaInputController: IMKInputController {
 
     private func applyCandidate(matching word: String) {
         guard let picked = shownCandidates.first(where: { $0.word == word }) else {
-            imeLog("候選 \(word) 不在清單中（\(shownCandidates.count) 項）")
+            imeDebug("候選 \(word) 不在清單中（\(shownCandidates.count) 項）")
             return
         }
-        imeLog("選定 \(picked.word) start=\(picked.start) span=\(picked.span)")
+        imeDebug("選定 \(picked.word) start=\(picked.start) span=\(picked.span)")
         composition.choose(picked)
         hideCandidates()
     }
@@ -224,7 +224,7 @@ class ZhijeidaInputController: IMKInputController {
 
     private func selectCandidate(_ index: Int, client: IMKTextInput) {
         guard index < shownCandidates.count else { return }
-        imeLog("數字鍵選 \(shownCandidates[index].word)")
+        imeDebug("數字鍵選 \(shownCandidates[index].word)")
         composition.choose(shownCandidates[index])
         hideCandidates()
         update(client)
@@ -261,7 +261,7 @@ class ZhijeidaInputController: IMKInputController {
         flushPending()
         guard !composition.isEmpty else { return }
         let text = composition.text
-        imeLog("commit -> \(text)")
+        imeDebug("commit -> \(text)")
         lastCommitWasChinese = text.last.map { ("\u{4E00}"..."\u{9FFF}").contains(String($0)) } ?? false
         // 記住這次手動選過的詞，下次自動選字會偏向它
         for choice in composition.userChoices() {
