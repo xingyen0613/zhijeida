@@ -9,6 +9,8 @@ class SmartBopomofoInputController: IMKInputController {
     /// 正在輸入中的按鍵
     private var pending = ""
     private var candidatesVisible = false
+    /// 候選視窗目前列出的項目，用來把選中的字串對應回音節範圍
+    private var shownCandidates: [Candidate] = []
 
     // MARK: - 輸入
 
@@ -28,7 +30,7 @@ class SmartBopomofoInputController: IMKInputController {
                 // 英文詞之間的空白要保留，中文一聲的空白只是確認
                 let afterEnglish = Bopomofo.split(pending).last.map { !$0.isChinese } ?? false
                 flushPending()
-                if afterEnglish { composition.append(keys: " ", isChinese: false) }
+                if afterEnglish { composition.insert(keys: " ", isChinese: false) }
                 update(client)
             } else if !composition.isEmpty {
                 commit(client)
@@ -55,7 +57,7 @@ class SmartBopomofoInputController: IMKInputController {
         case #selector(NSResponder.insertNewline(_:)):
             if candidatesVisible {
                 if let picked = candidatesWindow?.selectedCandidateString() {
-                    composition.choose(picked.string)
+                    applyCandidate(matching: picked.string)
                 }
                 hideCandidates()
                 update(client)
@@ -70,16 +72,33 @@ class SmartBopomofoInputController: IMKInputController {
             if !pending.isEmpty {
                 pending.removeLast()
             } else if !composition.isEmpty {
-                composition.removeLast()
+                composition.deleteBackward()
             } else {
                 return false
             }
             update(client)
             return true
 
+        case #selector(NSResponder.moveToBeginningOfLine(_:)):
+            guard !composition.isEmpty else { return false }
+            flushPending()
+            composition.moveCursorToStart()
+            update(client)
+            return true
+
+        case #selector(NSResponder.moveToEndOfLine(_:)):
+            guard !composition.isEmpty else { return false }
+            flushPending()
+            composition.moveCursorToEnd()
+            update(client)
+            return true
+
         case #selector(NSResponder.moveDown(_:)):
             if candidatesVisible { candidatesWindow?.moveDown(nil); return true }
-            guard !composition.currentCandidates.isEmpty else { return false }
+            flushPending()
+            shownCandidates = composition.candidatesAtCursor()
+            guard !shownCandidates.isEmpty else { return false }
+            update(client)
             showCandidates()
             return true
 
@@ -89,14 +108,16 @@ class SmartBopomofoInputController: IMKInputController {
 
         case #selector(NSResponder.moveLeft(_:)):
             if candidatesVisible { candidatesWindow?.moveLeft(nil); return true }
-            guard !composition.isEmpty else { return false }
+            guard !pending.isEmpty || !composition.isEmpty else { return false }
+            flushPending()
             composition.moveCursor(-1)
             update(client)
             return true
 
         case #selector(NSResponder.moveRight(_:)):
             if candidatesVisible { candidatesWindow?.moveRight(nil); return true }
-            guard !composition.isEmpty else { return false }
+            guard !pending.isEmpty || !composition.isEmpty else { return false }
+            flushPending()
             composition.moveCursor(1)
             update(client)
             return true
@@ -117,13 +138,18 @@ class SmartBopomofoInputController: IMKInputController {
     // MARK: - 候選字
 
     override func candidates(_ sender: Any!) -> [Any]! {
-        composition.currentCandidates
+        shownCandidates.map(\.word)
     }
 
     override func candidateSelected(_ candidateString: NSAttributedString!) {
-        composition.choose(candidateString.string)
-        hideCandidates()
+        applyCandidate(matching: candidateString.string)
         if let client = client() { update(client) }
+    }
+
+    private func applyCandidate(matching word: String) {
+        guard let picked = shownCandidates.first(where: { $0.word == word }) else { return }
+        composition.choose(picked)
+        hideCandidates()
     }
 
     private func showCandidates() {
@@ -138,9 +164,8 @@ class SmartBopomofoInputController: IMKInputController {
     }
 
     private func selectCandidate(_ index: Int, client: IMKTextInput) {
-        let list = composition.currentCandidates
-        guard index < list.count else { return }
-        composition.choose(list[index])
+        guard index < shownCandidates.count else { return }
+        composition.choose(shownCandidates[index])
         hideCandidates()
         update(client)
     }
@@ -151,15 +176,15 @@ class SmartBopomofoInputController: IMKInputController {
     private func flushPending() {
         guard !pending.isEmpty else { return }
         for part in Bopomofo.split(pending) {
-            composition.append(keys: part.keys, isChinese: part.isChinese)
+            composition.insert(keys: part.keys, isChinese: part.isChinese)
         }
         pending = ""
     }
 
     private func update(_ client: IMKTextInput) {
-        let text = composition.marked(pendingKeys: pending)
+        let (text, offset) = composition.marked(pendingKeys: pending)
         client.setMarkedText(text,
-                             selectionRange: NSRange(location: text.count, length: 0),
+                             selectionRange: NSRange(location: offset, length: 0),
                              replacementRange: NSRange(location: NSNotFound, length: 0))
     }
 
