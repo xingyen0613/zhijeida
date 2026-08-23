@@ -26,6 +26,7 @@ struct Candidate {
     let word: String
     let start: Int
     let span: Int
+    let score: Double
 }
 
 /// 尚未上屏的組字內容。
@@ -111,15 +112,35 @@ struct Composition {
 
     // MARK: - 選字
 
-    /// 游標左側的音節位置，選字以它為準
+    /// 選字針對的音節：游標左側那個；游標在最前面時改看右側第一個
     private var targetIndex: Int? {
-        let idx = cursor - 1
+        let idx = cursor > 0 ? cursor - 1 : 0
         guard idx >= 0, idx < items.count, items[idx].isChinese else { return nil }
         return idx
     }
 
-    /// 所有涵蓋游標左側音節的候選：先單字，再兩字詞、三字詞…
-    /// 這樣「測試」中的「測」可以單獨換掉，也可以整個詞換掉。
+    /// 游標左側那「一個字」在顯示文字中的範圍。
+    /// 即使它屬於某個詞（「測試」的「測」），也只標示該字，選字以字為單位。
+    func highlightRange() -> Range<Int>? {
+        guard let target = targetIndex else { return nil }
+        var offset = 0
+        for chunk in chunks() {
+            if chunk.range.contains(target) {
+                let within = target - chunk.range.lowerBound
+                guard within < chunk.text.count else {
+                    return offset..<(offset + chunk.text.count)
+                }
+                return (offset + within)..<(offset + within + 1)
+            }
+            offset += chunk.text.count
+        }
+        return nil
+    }
+
+    /// 所有涵蓋游標左側音節的候選。
+    ///
+    /// 詞排在單字前面：同音單字動輒數十個，若照長度排會把「測試」這種
+    /// 常用詞擠到幾十位之後。詞與單字各自依分數由高到低。
     func candidatesAtCursor() -> [Candidate] {
         guard let target = targetIndex else { return [] }
         var result: [Candidate] = []
@@ -130,13 +151,21 @@ struct Composition {
                 guard items[start..<end].allSatisfy(\.isChinese) else { continue }
                 let keys = items[start..<end].map(\.keys).joined()
                 for entry in LanguageModel.candidates(keys) {
-                    result.append(Candidate(word: entry.word, start: start, span: span))
+                    result.append(Candidate(word: entry.word, start: start,
+                                            span: span, score: entry.score))
                 }
             }
         }
-        // 同一個詞可能從不同起點重複出現，保留先出現的（span 較短者）
-        var seen = Set<String>()
-        return result.filter { seen.insert($0.word).inserted }
+        // 同一個詞可能從不同起點重複出現，保留分數最高的那個
+        var best: [String: Candidate] = [:]
+        for candidate in result {
+            if let existing = best[candidate.word], existing.score >= candidate.score { continue }
+            best[candidate.word] = candidate
+        }
+        return best.values.sorted {
+            if ($0.span == 1) != ($1.span == 1) { return $0.span > $1.span }
+            return $0.score > $1.score
+        }
     }
 
     mutating func choose(_ candidate: Candidate) {

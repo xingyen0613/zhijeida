@@ -20,7 +20,7 @@ enum LanguageModel {
         guard let path = Bundle.main.path(forResource: "lm", ofType: "tsv")
                 ?? ProcessInfo.processInfo.environment["LM_TSV"],
               let text = try? String(contentsOfFile: path, encoding: .utf8) else {
-            NSLog("SmartBopomofo: 找不到 lm.tsv")
+            imeLog("找不到 lm.tsv")
             return [:]
         }
         var result = [String: [(String, Double)]](minimumCapacity: 140_000)
@@ -37,7 +37,7 @@ enum LanguageModel {
             }
             result[keys] = list
         }
-        NSLog("SmartBopomofo: 語言模型載入 \(result.count) 個按鍵序列")
+        imeLog("語言模型載入 \(result.count) 個按鍵序列")
         return result
     }
 

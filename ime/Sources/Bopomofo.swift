@@ -41,7 +41,7 @@ enum Bopomofo {
         let path = Bundle.main.path(forResource: "bpmf", ofType: "tsv")
             ?? ProcessInfo.processInfo.environment["BPMF_TSV"]   // 命令列測試用
         guard let path, let text = try? String(contentsOfFile: path, encoding: .utf8) else {
-            NSLog("SmartBopomofo: 找不到 bpmf.tsv，中文將只顯示注音")
+            imeLog("找不到 bpmf.tsv，中文將只顯示注音")
             return [:]
         }
         var result: [String: [String]] = [:]
@@ -50,7 +50,7 @@ enum Bopomofo {
             guard parts.count == 2 else { continue }
             result[String(parts[0])] = parts[1].map(String.init)
         }
-        NSLog("SmartBopomofo: 載入 \(result.count) 個音節")
+        imeLog("載入 \(result.count) 個音節")
         return result
     }
 

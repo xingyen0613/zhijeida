@@ -56,11 +56,13 @@ class SmartBopomofoInputController: IMKInputController {
         switch aSelector {
         case #selector(NSResponder.insertNewline(_:)):
             if candidatesVisible {
-                if let picked = candidatesWindow?.selectedCandidateString() {
-                    applyCandidate(matching: picked.string)
-                }
-                hideCandidates()
-                update(client)
+                // 交給候選視窗處理，它會回調 candidateSelected
+                candidatesWindow?.interpretKeyEvents([
+                    NSEvent.keyEvent(with: .keyDown, location: .zero, modifierFlags: [],
+                                     timestamp: 0, windowNumber: 0, context: nil,
+                                     characters: "\r", charactersIgnoringModifiers: "\r",
+                                     isARepeat: false, keyCode: 36)
+                ].compactMap { $0 })
                 return true
             }
             guard !pending.isEmpty || !composition.isEmpty else { return false }
@@ -97,8 +99,12 @@ class SmartBopomofoInputController: IMKInputController {
             if candidatesVisible { candidatesWindow?.moveDown(nil); return true }
             flushPending()
             shownCandidates = composition.candidatesAtCursor()
-            guard !shownCandidates.isEmpty else { return false }
             update(client)
+            // 即使沒有候選也要吃掉這個按鍵，否則組字區會被應用程式清掉
+            guard !shownCandidates.isEmpty else {
+                imeLog("游標處沒有候選")
+                return true
+            }
             showCandidates()
             return true
 
@@ -142,12 +148,21 @@ class SmartBopomofoInputController: IMKInputController {
     }
 
     override func candidateSelected(_ candidateString: NSAttributedString!) {
-        applyCandidate(matching: candidateString.string)
-        if let client = client() { update(client) }
+        NSLog("SmartBopomofo: candidateSelected \(candidateString?.string ?? "nil")")
+        applyCandidate(matching: candidateString?.string ?? "")
+        if let client = client() {
+            update(client)
+        } else {
+            imeLog("client() 為 nil，畫面沒更新")
+        }
     }
 
     private func applyCandidate(matching word: String) {
-        guard let picked = shownCandidates.first(where: { $0.word == word }) else { return }
+        guard let picked = shownCandidates.first(where: { $0.word == word }) else {
+            imeLog("候選 \(word) 不在清單中（\(shownCandidates.count) 項）")
+            return
+        }
+        imeLog("選定 \(picked.word) start=\(picked.start) span=\(picked.span)")
         composition.choose(picked)
         hideCandidates()
     }
@@ -165,6 +180,7 @@ class SmartBopomofoInputController: IMKInputController {
 
     private func selectCandidate(_ index: Int, client: IMKTextInput) {
         guard index < shownCandidates.count else { return }
+        imeLog("數字鍵選 \(shownCandidates[index].word)")
         composition.choose(shownCandidates[index])
         hideCandidates()
         update(client)
@@ -183,7 +199,18 @@ class SmartBopomofoInputController: IMKInputController {
 
     private func update(_ client: IMKTextInput) {
         let (text, offset) = composition.marked(pendingKeys: pending)
-        client.setMarkedText(text,
+        let attributed = NSMutableAttributedString(string: text)
+        let whole = NSRange(location: 0, length: (text as NSString).length)
+        attributed.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: whole)
+        // 游標所在的字用粗底線，讓使用者看得出現在會改到哪一個
+        if pending.isEmpty, let hl = composition.highlightRange() {
+            let ns = NSRange(location: hl.lowerBound, length: hl.count)
+            if NSMaxRange(ns) <= whole.length {
+                attributed.addAttribute(.underlineStyle,
+                                        value: NSUnderlineStyle.thick.rawValue, range: ns)
+            }
+        }
+        client.setMarkedText(attributed,
                              selectionRange: NSRange(location: offset, length: 0),
                              replacementRange: NSRange(location: NSNotFound, length: 0))
     }
@@ -192,7 +219,7 @@ class SmartBopomofoInputController: IMKInputController {
         flushPending()
         guard !composition.isEmpty else { return }
         let text = composition.text
-        NSLog("SmartBopomofo: commit -> \(text)")
+        imeLog("commit -> \(text)")
         composition.clear()
         hideCandidates()
         client.setMarkedText("", selectionRange: NSRange(location: 0, length: 0),
