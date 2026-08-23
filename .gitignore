@@ -13,3 +13,6 @@ xcuserdata/
 # 真實打字樣本可能含個人內容，不進版控
 samples/*.txt
 !samples/example.txt
+
+# 個人詞庫含工作術語與持股代號，不進版控
+userdict.txt
