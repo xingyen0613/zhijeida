@@ -14,6 +14,22 @@ class SmartBopomofoInputController: IMKInputController {
 
     // MARK: - 輸入
 
+    /// 這個版本才拿得到修飾鍵。除了 Ctrl + 符號要轉全形，
+    /// 其餘一律原樣轉給下面的 inputText(_:client:)，不改變既有分派。
+    override func inputText(_ string: String!, key keyCode: Int,
+                            modifiers flags: Int, client sender: Any!) -> Bool {
+        let control = Int(NSEvent.ModifierFlags.control.rawValue)
+        if flags & control != 0, let s = string, let full = Symbols.full(s),
+           let client = sender as? IMKTextInput {
+            imeLog("全形符號 \(s) -> \(full)")
+            flushPending()
+            composition.insert(keys: full, isChinese: false)
+            update(client)
+            return true
+        }
+        return inputText(string, client: sender)
+    }
+
     override func inputText(_ string: String!, client sender: Any!) -> Bool {
         guard let s = string, let ch = s.first,
               let client = sender as? IMKTextInput else { return false }
