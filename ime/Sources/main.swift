@@ -15,7 +15,13 @@ let candidatesBackgroundColor = NSColor(name: nil) { appearance in
         ? NSColor(white: 0.10, alpha: 1.0)
         : NSColor(white: 0.82, alpha: 1.0)
 }
-candidatesWindow?.setAttributes([NSAttributedString.DocumentAttributeKey.backgroundColor: candidatesBackgroundColor])
+// setAttributes 是整包覆蓋而非合併，必須先讀回既有的再加上去。
+// IMK 建立候選視窗時預設帶了 IMKCandidatesSendServerKeyEventFirst = 1
+// （按鍵先送到 controller），直接覆蓋會把它洗掉，方向鍵就進不了
+// didCommand(by:)，選字與組字區游標移動全部失靈。
+var candidatesAttributes = candidatesWindow?.attributes() ?? [:]
+candidatesAttributes[NSAttributedString.DocumentAttributeKey.backgroundColor] = candidatesBackgroundColor
+candidatesWindow?.setAttributes(candidatesAttributes)
 
 imeLog("server started (\(server != nil))")
 
