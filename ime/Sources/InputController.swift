@@ -14,34 +14,32 @@ class SmartBopomofoInputController: IMKInputController {
 
     // MARK: - 輸入
 
-    /// 這個版本才拿得到修飾鍵。除了 Ctrl + 符號要轉全形，
-    /// 其餘一律原樣轉給下面的 inputText(_:client:)，不改變既有分派。
-    override func inputText(_ string: String!, key keyCode: Int,
-                            modifiers flags: Int, client sender: Any!) -> Bool {
-        let control = Int(NSEvent.ModifierFlags.control.rawValue)
-        if flags & control != 0, let s = string, let full = Symbols.full(s),
-           let client = sender as? IMKTextInput {
+    override func inputText(_ string: String!, client sender: Any!) -> Bool {
+        guard let s = string, let ch = s.first,
+              let client = sender as? IMKTextInput else { return false }
+
+        // 私有區字元（方向鍵等）與控制字元不是可輸入的文字，直接忽略。
+        // 注意這裡要吃掉而不是回傳 false —— 回傳 false 會讓按鍵落到
+        // 應用程式手上，組字區就被清掉了。
+        if let scalar = ch.unicodeScalars.first {
+            let isFunctionKey = (0xF700...0xF8FF).contains(scalar.value)
+            let isControl = scalar.value < 0x20 || scalar.value == 0x7F
+            if isFunctionKey || isControl {
+                imeLog("忽略非文字按鍵 U+\(String(scalar.value, radix: 16))")
+                return !composition.isEmpty || !pending.isEmpty
+            }
+        }
+
+        // Ctrl + 符號輸出全形。修飾鍵從當前事件讀取，
+        // 這樣不必實作 inputText(_:key:modifiers:client:)——實作它會讓
+        // IMK 連方向鍵與 Enter 都送進文字路徑。
+        if let event = NSApp.currentEvent, event.modifierFlags.contains(.control),
+           let full = Symbols.full(s) {
             imeLog("全形符號 \(s) -> \(full)")
             flushPending()
             composition.insert(keys: full, isChinese: false)
             update(client)
             return true
-        }
-        return inputText(string, client: sender)
-    }
-
-    override func inputText(_ string: String!, client sender: Any!) -> Bool {
-        guard let s = string, let ch = s.first,
-              let client = sender as? IMKTextInput else { return false }
-
-        // 實作 inputText(_:key:modifiers:client:) 之後，IMK 會把方向鍵、
-        // Enter 這類按鍵也送到這裡。方向鍵的 characters 是 Unicode 私有區
-        // 字元（顯示成方塊），Enter 是 \r，都不能當成一般文字收進組字區。
-        // 回傳 false 讓它們回到 didCommand 的處理路徑。
-        if let scalar = ch.unicodeScalars.first {
-            let isFunctionKey = (0xF700...0xF8FF).contains(scalar.value)
-            let isControl = scalar.value < 0x20 || scalar.value == 0x7F
-            if isFunctionKey || isControl { return false }
         }
 
         // 候選字視窗開啟時，數字鍵直接選字
