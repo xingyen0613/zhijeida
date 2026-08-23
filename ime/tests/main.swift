@@ -87,6 +87,18 @@ var g = typed("cpu ")
 let gList = g.candidatesAtCursor()
 check("英文段落也有候選", gList.isEmpty ? "no" : "yes", "yes")
 
+print("\n全字母黏著（cpoep = cpo + 跟）")
+var h = typed("cpoep ")
+check("預設判為英文", h.text, "cpoep ")
+h.moveCursorToStart()
+h.moveCursor(1)
+let hList = h.candidatesAtCursor()
+check("候選含尾段的中文", hList.contains { $0.word == "跟" } ? "yes" : "no", "yes")
+if let gen = hList.first(where: { $0.word == "跟" }) {
+    h.choose(gen)
+    check("選後切成 cpo + 跟", h.text, "cpo跟 ")
+}
+
 print("\n使用者選字習慣")
 UserPhrases.reset()
 let recordKeys = "ru4xj4"

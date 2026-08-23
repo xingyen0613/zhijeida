@@ -29,6 +29,8 @@ struct Candidate {
     let score: Double
     /// 原始按鍵本身（數字或英文），供判錯時選回去
     var isLiteral: Bool = false
+    /// 若這個候選是從英文段落的尾段切出來的，這是切剩的英文前綴
+    var englishPrefix: String? = nil
 }
 
 /// 尚未上屏的組字內容。
@@ -161,11 +163,27 @@ struct Composition {
         guard let target = targetIndex else { return [] }
         let literal = items[target].keys
 
-        // 英文段落：列出這串按鍵可能對應的中文，讓判錯時能改回來
+        // 英文段落：除了整串對應的中文，也列出尾段可能構成的字。
+        // cpoep 是「cpo」+「跟」，沒有非字母鍵當線索時判不出切點，交給使用者選。
         guard items[target].isChinese else {
             var list = LanguageModel.candidates(literal).map {
                 Candidate(word: $0.word, start: target, span: 1, score: $0.score)
             }
+            if literal.count > 1 {
+                for offset in 1..<literal.count {
+                    let idx = literal.index(literal.startIndex, offsetBy: offset)
+                    let tail = String(literal[idx...])
+                    let prefix = String(literal[..<idx])
+                    for entry in LanguageModel.candidates(tail) {
+                        list.append(Candidate(word: entry.word, start: target, span: 1,
+                                              score: entry.score, englishPrefix: prefix))
+                    }
+                }
+            }
+            // 同一個字可能從不同切點出現，保留前綴最長的（切得最少）
+            var seen = Set<String>()
+            list = list.filter { seen.insert($0.word + ($0.englishPrefix ?? "")).inserted }
+            list.sort { $0.score > $1.score }
             list.append(Candidate(word: literal, start: target, span: 1,
                                   score: 0, isLiteral: true))
             return list
@@ -204,6 +222,18 @@ struct Composition {
     }
 
     mutating func choose(_ candidate: Candidate) {
+        // 從英文段落切出中文：把該段拆成「英文前綴」與「中文音節」兩個 item
+        if let prefix = candidate.englishPrefix, candidate.start < items.count {
+            let whole = items[candidate.start].keys
+            guard prefix.count < whole.count else { return }
+            let syllable = String(whole.dropFirst(prefix.count))
+            items[candidate.start] = .english(prefix)
+            items.insert(.chinese(keys: syllable), at: candidate.start + 1)
+            shiftOverrides(from: candidate.start + 1, by: 1)
+            overrides[candidate.start + 1] = (candidate.word, 1)
+            if cursor > candidate.start { cursor += 1 }
+            return
+        }
         // 蓋住的範圍內原有的選擇要清掉，避免衝突
         for i in candidate.start..<(candidate.start + candidate.span) {
             overrides.removeValue(forKey: i)
