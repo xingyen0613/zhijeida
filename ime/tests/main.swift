@@ -91,8 +91,7 @@ check("英文段落也有候選", gList.isEmpty ? "no" : "yes", "yes")
 print("\n全字母黏著（cpoep = cpo + 跟）")
 var h = typed("cpoep ")
 check("預設判為英文", h.text, "cpoep ")
-h.moveCursorToStart()
-h.moveCursor(1)
+h.moveCursor(-1)              // 游標移到最後一個 p 之後
 let hList = h.candidatesAtCursor()
 check("候選含尾段的中文", hList.contains { $0.word == "跟" } ? "yes" : "no", "yes")
 if let gen = hList.first(where: { $0.word == "跟" }) {
@@ -113,7 +112,7 @@ check("向右刪除只刪一個", k.text, "(")
 print("\n跨段落詞（56 + 接 = 直接）")
 var m = typed("()56ru, ")
 check("預設", m.text, "()56接")
-check("數字各自成單位", m.itemCount, 5)      // ( ) 5 6 接
+check("每個字元各自成單位", m.itemCount, 5)   // ( ) 5 6 接
 m.moveCursor(-1)                              // 游標移到「6」之後
 let mList = m.candidatesAtCursor()
 check("往前合併後仍查得到詞", mList.contains { $0.word == "直接" } ? "yes" : "no", "yes")
@@ -157,6 +156,16 @@ for (label, scalar) in [("下方向鍵", UnicodeScalar(0xF701)!), ("Enter", Unic
 }
 check("一般字元放行", { let s = UnicodeScalar("d").value
     return (0xF700...0xF8FF).contains(s) || s < 0x20 ? "no" : "yes" }(), "yes")
+
+print("\n英文可逐字編輯")
+var q = typed("test ")
+check("每個字母獨立", q.itemCount, 5)        // t e s t 空白
+q.moveCursorToStart()
+q.moveCursor(2)
+check("游標可停在字母之間", { let (t, o) = q.marked(pendingKeys: "")
+    return String(t.prefix(o)) + "|" + String(t.dropFirst(o)) }(), "te|st ")
+q.deleteForward()
+check("逐字刪除", q.text, "tet ")
 
 print("\n符號全半形")
 var p1 = typed("ji3")        // 我

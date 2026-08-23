@@ -278,8 +278,8 @@ struct Composition {
            let syllable = candidate.syllableKeys,
            let prefix = candidate.englishPrefix,
            range.upperBound <= items.count {
-            var replacement: [Item] = []
-            if !prefix.isEmpty { replacement.append(.english(prefix)) }
+            // 前綴同樣逐字元保留，維持「每個字元一個 item」的原則
+            var replacement: [Item] = prefix.map { .english(String($0)) }
             replacement.append(.chinese(keys: syllable))
 
             let delta = replacement.count - range.count

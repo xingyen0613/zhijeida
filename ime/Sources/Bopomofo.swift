@@ -94,22 +94,11 @@ enum Bopomofo {
         return [(false, keys)]
     }
 
-    /// 把一段英文切成獨立單位：連續的字母數字算一個，符號各自獨立。
-    /// 這樣 () 不會黏成一塊，游標可以移進括號中間。
+    /// 把一段英文切成獨立單位。
     static func englishTokens(_ keys: String) -> [String] {
-        var result: [String] = []
-        var current = ""
-        for ch in keys {
-            // 字母連在一起算一個詞；數字與符號各自獨立，游標才進得去
-            if ch.isLetter {
-                current.append(ch)
-            } else {
-                if !current.isEmpty { result.append(current); current = "" }
-                result.append(String(ch))
-            }
-        }
-        if !current.isEmpty { result.append(current) }
-        return result
+        // 每個字元各自獨立，游標才能逐字移動與刪除。
+        // 候選搜尋會把相鄰的英文片段接回來查詞，所以拆開不影響選字。
+        keys.map(String.init)
     }
 
     /// 把按鍵轉成注音符號串（組字區顯示用）
