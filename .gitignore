@@ -1,0 +1,15 @@
+.DS_Store
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Xcode（後續 Swift 階段）
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# 真實打字樣本可能含個人內容，不進版控
+samples/*.txt
+!samples/example.txt
