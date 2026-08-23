@@ -18,11 +18,16 @@ class SmartBopomofoInputController: IMKInputController {
         guard let s = string, let ch = s.first,
               let client = sender as? IMKTextInput else { return false }
 
-        // Ctrl 組合要用 charactersIgnoringModifiers 取原始按鍵，
-        // 因為 Ctrl 送進來的 characters 可能已經是控制字元。
+        // Option / Ctrl + 符號輸出全形。
+        // 要用 charactersIgnoringModifiers 取原始按鍵：Option+, 的 characters
+        // 是「≤」，Ctrl 組合則可能已經是控制字元。
         // 這段必須排在下面的控制字元過濾之前，否則會被提前擋掉。
-        if let event = NSApp.currentEvent, event.modifierFlags.contains(.control) {
-            let raw = event.charactersIgnoringModifiers ?? s
+        //
+        // 以 Option 為主：Ctrl+, 在許多應用程式是「偏好設定」的快捷鍵，
+        // 會被攔在輸入法之前（日誌完全收不到該按鍵）。
+        let modifiers = NSApp.currentEvent?.modifierFlags ?? []
+        if modifiers.contains(.option) || modifiers.contains(.control) {
+            let raw = NSApp.currentEvent?.charactersIgnoringModifiers ?? s
             if let full = Symbols.full(raw) {
                 imeLog("全形符號 \(raw) -> \(full)")
                 flushPending()
@@ -30,9 +35,9 @@ class SmartBopomofoInputController: IMKInputController {
                 update(client)
                 return true
             }
-            // 其他 Ctrl 組合是應用程式的快捷鍵。放行之前先把組字區送出，
+            // 其他組合是應用程式的快捷鍵。放行之前先把組字區送出，
             // 否則使用者已經打好的內容會隨著焦點轉移憑空消失。
-            imeLog("Ctrl 快捷鍵 \(raw)，放行")
+            imeLog("修飾鍵組合 \(raw)，放行")
             if !composition.isEmpty || !pending.isEmpty { commit(client) }
             return false
         }
