@@ -21,7 +21,7 @@ enum UserPhrases {
         }
         let base = FileManager.default.urls(for: .applicationSupportDirectory,
                                             in: .userDomainMask)[0]
-            .appendingPathComponent("SmartBopomofo", isDirectory: true)
+            .appendingPathComponent("Zhijeida", isDirectory: true)
         try? FileManager.default.createDirectory(at: base, withIntermediateDirectories: true)
         return base.appendingPathComponent("user-phrases.tsv")
     }()

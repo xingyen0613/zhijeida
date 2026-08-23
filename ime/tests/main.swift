@@ -51,8 +51,8 @@ check("開發", typed("d9 z8 ").text, "開發")
 check("這是一個", typed("5k4g4u ek7").text, "這是一個")
 
 print("\n數字")
-check("英文接數字", typed("ji3g4xingyen0613").text, "我是xingyen0613")
-check("手機號碼", typed("ji32k7g.3ru g40985463251").text, "我的手機是0985463251")
+check("英文接數字", typed("ji3g4user2024").text, "我是user2024")
+check("長數字串", typed("ji32k7g.3ru g41234567890").text, "我的手機是1234567890")
 check("全數字仍是音節：大", typed("284").text, "大")
 check("全數字仍是音節：八", typed("18").text, "八")
 
@@ -88,15 +88,15 @@ var g = typed("cpu ")
 let gList = g.candidatesAtCursor()
 check("英文段落也有候選", gList.isEmpty ? "no" : "yes", "yes")
 
-print("\n全字母黏著（cpoep = cpo + 跟）")
-var h = typed("cpoep ")
-check("預設判為英文", h.text, "cpoep ")
+print("\n全字母黏著（sdkep = sdk + 跟）")
+var h = typed("sdkep ")
+check("預設判為英文", h.text, "sdkep ")
 h.moveCursor(-1)              // 游標移到最後一個 p 之後
 let hList = h.candidatesAtCursor()
 check("候選含尾段的中文", hList.contains { $0.word == "跟" } ? "yes" : "no", "yes")
 if let gen = hList.first(where: { $0.word == "跟" }) {
     h.choose(gen)
-    check("選後切成 cpo + 跟", h.text, "cpo跟 ")
+    check("選後切成 sdk + 跟", h.text, "sdk跟 ")
 }
 
 print("\n符號與向右刪除")

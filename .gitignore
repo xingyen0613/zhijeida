@@ -4,17 +4,17 @@ __pycache__/
 .venv/
 venv/
 
-# Xcode（後續 Swift 階段）
+# Xcode
 build/
 DerivedData/
 *.xcuserstate
 xcuserdata/
 
-# 真實打字樣本可能含個人內容，不進版控
+# 真實打字樣本含個人內容，不進版控
 samples/*.txt
 !samples/example.txt
 
-# 個人詞庫含工作術語與持股代號，不進版控
+# 個人詞庫，不進版控
 userdict.txt
 
 # 編譯產物

@@ -1,11 +1,8 @@
-cpo
-cpu
-csp
-eml
-ccl
-pcb
-mrvl
-goog
-ibkr
-cwsel
-macbook
+# judge.py（Phase 1 離線判別器）的個人詞庫範例。
+# 每行一個詞，用於全字母黏著時判斷切點。
+# 實際使用時複製為 userdict.txt，該檔不進版控。
+sdk
+api
+npm
+cli
+json

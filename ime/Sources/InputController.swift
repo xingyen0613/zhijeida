@@ -1,8 +1,8 @@
 import Cocoa
 import InputMethodKit
 
-@objc(SmartBopomofoInputController)
-class SmartBopomofoInputController: IMKInputController {
+@objc(ZhijeidaInputController)
+class ZhijeidaInputController: IMKInputController {
 
     /// 已完成、尚未上屏的段落
     private var composition = Composition()
@@ -75,7 +75,7 @@ class SmartBopomofoInputController: IMKInputController {
         pending.append(ch)
 
         // 聲調鍵標記一個音節結束。但數字鍵同時是聲調鍵，
-        // 打 0613 這種數字串時尾段不是中文，就不該結算。
+        // 打長數字串時尾段不是中文，就不該結算。
         if Bopomofo.tone[ch] != nil, Bopomofo.split(pending).last?.isChinese == true {
             flushPending()
         }
@@ -192,7 +192,7 @@ class SmartBopomofoInputController: IMKInputController {
     }
 
     override func candidateSelected(_ candidateString: NSAttributedString!) {
-        NSLog("SmartBopomofo: candidateSelected \(candidateString?.string ?? "nil")")
+        NSLog("Zhijeida: candidateSelected \(candidateString?.string ?? "nil")")
         applyCandidate(matching: candidateString?.string ?? "")
         if let client = client() {
             update(client)

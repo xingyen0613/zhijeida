@@ -5,17 +5,17 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>SmartBopomofo</string>
+	<string>Zhijeida</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.yen.inputmethod.SmartBopomofo</string>
+	<string>com.yen.inputmethod.Zhijeida</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>SmartBopomofo</string>
+	<string>Zhijeida</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleSignature</key>
-	<string>SBPM</string>
+	<string>ZJDA</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.1</string>
 	<key>CFBundleVersion</key>
@@ -27,13 +27,13 @@
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>InputMethodConnectionName</key>
-	<string>com.yen.inputmethod.SmartBopomofo_Connection</string>
+	<string>com.yen.inputmethod.Zhijeida_Connection</string>
 	<key>InputMethodServerControllerClass</key>
-	<string>SmartBopomofoInputController</string>
+	<string>ZhijeidaInputController</string>
 	<key>InputMethodServerDelegateClass</key>
-	<string>SmartBopomofoInputController</string>
+	<string>ZhijeidaInputController</string>
 	<key>TISInputSourceID</key>
-	<string>com.yen.inputmethod.SmartBopomofo</string>
+	<string>com.yen.inputmethod.Zhijeida</string>
 	<key>TISIntendedLanguage</key>
 	<string>zh-Hant</string>
 	<key>TICapsLockLanguageSwitchCapable</key>
@@ -49,10 +49,10 @@
 	<dict>
 		<key>tsInputModeListKey</key>
 		<dict>
-			<key>com.yen.inputmethod.SmartBopomofo.Bopomofo</key>
+			<key>com.yen.inputmethod.Zhijeida.Bopomofo</key>
 			<dict>
 				<key>TISInputSourceID</key>
-				<string>com.yen.inputmethod.SmartBopomofo.Bopomofo</string>
+				<string>com.yen.inputmethod.Zhijeida.Bopomofo</string>
 				<key>TISIntendedLanguage</key>
 				<string>zh-Hant</string>
 				<key>tsInputModeAlternateMenuIconFileKey</key>
@@ -80,7 +80,7 @@
 		</dict>
 		<key>tsVisibleInputModeOrderedArrayKey</key>
 		<array>
-			<string>com.yen.inputmethod.SmartBopomofo.Bopomofo</string>
+			<string>com.yen.inputmethod.Zhijeida.Bopomofo</string>
 		</array>
 	</dict>
 </dict>

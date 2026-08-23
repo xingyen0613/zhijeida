@@ -74,7 +74,7 @@ enum Bopomofo {
     static func split(_ keys: String) -> [(isChinese: Bool, keys: String)] {
         guard !keys.isEmpty else { return [] }
         if isSyllable(keys) { return [(true, keys)] }
-        // 全是數字又不成音節，就是使用者在打數字（0613、手機號碼），
+        // 全是數字又不成音節，就是使用者在打數字（編號、電話），
         // 不要從尾部切出「06」=ㄢˊ 這種音節。注意「18」=ㄅㄚ=八 這類
         // 全數字的合法音節已在上一行認定為中文。
         if keys.allSatisfy(\.isNumber) { return [(false, keys)] }
@@ -84,7 +84,7 @@ enum Bopomofo {
             for offset in 1..<keys.count {
                 let idx = keys.index(keys.startIndex, offsetBy: offset)
                 let tail = String(keys[idx...])
-                // 尾段全是數字時視為數字的一部分（xingyen0613 的 06 不是ㄢˊ）
+                // 尾段全是數字時視為數字的一部分（user2024 的 06 不是ㄢˊ）
                 if tail.allSatisfy(\.isNumber) { continue }
                 if isSyllable(tail) {
                     return [(false, String(keys[..<idx])), (true, tail)]

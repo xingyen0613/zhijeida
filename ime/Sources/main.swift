@@ -1,7 +1,7 @@
 import Cocoa
 import InputMethodKit
 
-let kConnectionName = "com.yen.inputmethod.SmartBopomofo_Connection"
+let kConnectionName = "com.yen.inputmethod.Zhijeida_Connection"
 
 let server = IMKServer(name: kConnectionName, bundleIdentifier: Bundle.main.bundleIdentifier)
 
@@ -13,6 +13,6 @@ imeLog("server started (\(server != nil))")
 
 // 預先載入資料，避免第一次輸入時卡頓，也讓載入問題在啟動時就浮現
 imeLog("bundle=\(Bundle.main.bundlePath)")
-NSLog("SmartBopomofo: bpmf 音節 \(Bopomofo.isSyllable("d9") ? "OK" : "FAILED")")
-NSLog("SmartBopomofo: lm 詞條 \(LanguageModel.candidates("hk4g4").first?.word ?? "FAILED")")
+NSLog("Zhijeida: bpmf 音節 \(Bopomofo.isSyllable("d9") ? "OK" : "FAILED")")
+NSLog("Zhijeida: lm 詞條 \(LanguageModel.candidates("hk4g4").first?.word ?? "FAILED")")
 NSApplication.shared.run()

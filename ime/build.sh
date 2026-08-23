@@ -3,14 +3,14 @@
 set -e
 cd "$(dirname "$0")"
 
-APP="build/SmartBopomofo.app"
+APP="build/Zhijeida.app"
 rm -rf build
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 swiftc -O \
     -target arm64-apple-macos12.0 \
     -framework Cocoa -framework InputMethodKit \
-    -o "$APP/Contents/MacOS/SmartBopomofo" \
+    -o "$APP/Contents/MacOS/Zhijeida" \
     Sources/*.swift
 
 cp Info.plist "$APP/Contents/Info.plist"
@@ -18,11 +18,11 @@ cp Resources/*.tiff "$APP/Contents/Resources/"
 cp Data/bpmf.tsv Data/lm.tsv "$APP/Contents/Resources/"
 
 # 傳統 app bundle 需要 PkgInfo（Xcode 會自動產生，手工組要自己補）
-printf 'APPLSBPM' > "$APP/Contents/PkgInfo"
+printf 'APPLZJDA' > "$APP/Contents/PkgInfo"
 
 mkdir -p "$APP/Contents/Resources/en.lproj"
 cat > "$APP/Contents/Resources/en.lproj/InfoPlist.strings" <<'STRINGS'
-"CFBundleName" = "SmartBopomofo";
+"CFBundleName" = "Zhijeida";
 STRINGS
 codesign --force --sign - "$APP"
 

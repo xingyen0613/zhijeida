@@ -200,7 +200,7 @@ struct Composition {
         let literal = items[target].keys
 
         // 英文段落：除了整串對應的中文，也列出尾段可能構成的字。
-        // cpoep 是「cpo」+「跟」，沒有非字母鍵當線索時判不出切點，交給使用者選。
+        // sdkep 是「sdk」+「跟」，沒有非字母鍵當線索時判不出切點，交給使用者選。
         guard items[target].isChinese else {
             var list = LanguageModel.candidates(literal).map {
                 Candidate(word: $0.word, start: target, span: 1, score: $0.score)
