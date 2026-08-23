@@ -68,6 +68,7 @@ class SmartBopomofoInputController: IMKInputController {
     }
 
     override func didCommand(by aSelector: Selector!, client sender: Any!) -> Bool {
+        imeLog("command \(aSelector.map(NSStringFromSelector) ?? "nil") pending=\(pending) items=\(composition.itemCount)")
         guard let client = sender as? IMKTextInput else { return false }
 
         switch aSelector {
@@ -100,11 +101,8 @@ class SmartBopomofoInputController: IMKInputController {
 
         case #selector(NSResponder.deleteForward(_:)):
             guard !composition.isEmpty || !pending.isEmpty else { return false }
-            if !pending.isEmpty {
-                flushPending()
-            } else {
-                composition.deleteForward()
-            }
+            flushPending()
+            composition.deleteForward()
             update(client)
             return true
 
@@ -128,6 +126,7 @@ class SmartBopomofoInputController: IMKInputController {
             guard !pending.isEmpty || !composition.isEmpty else { return false }
             flushPending()
             shownCandidates = composition.candidatesAtCursor()
+            imeLog("候選 \(shownCandidates.count) 項：\(shownCandidates.prefix(5).map(\.word).joined(separator: "/"))")
             update(client)
             // 即使沒有候選也要吃掉這個按鍵，否則組字區會被應用程式清掉
             guard !shownCandidates.isEmpty else {

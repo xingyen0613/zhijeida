@@ -45,10 +45,12 @@ struct Composition {
     private(set) var cursor: Int = 0
 
     var isEmpty: Bool { items.isEmpty }
+    var itemCount: Int { items.count }
 
     // MARK: - 編輯
 
     mutating func insert(keys: String, isChinese: Bool) {
+        guard !keys.isEmpty else { return }
         items.insert(isChinese ? .chinese(keys: keys) : .english(keys), at: cursor)
         shiftOverrides(from: cursor, by: 1)
         cursor += 1
@@ -65,7 +67,8 @@ struct Composition {
     /// 把一串待處理的按鍵切段後插入。
     /// InputController 與測試共用這裡，避免兩邊邏輯漂移。
     mutating func insertPending(_ keys: String) {
-        for part in Bopomofo.split(keys) {
+        guard !keys.isEmpty else { return }
+        for part in Bopomofo.split(keys) where !part.keys.isEmpty {
             if part.isChinese {
                 insert(keys: part.keys, isChinese: true)
             } else {

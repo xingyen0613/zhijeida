@@ -72,6 +72,7 @@ enum Bopomofo {
     /// 把一段按鍵切成「英文前綴 + 中文音節」。
     /// 英文與注音之間沒有分隔符（macbooknji3），從尾部取最長合法音節，前綴即英文。
     static func split(_ keys: String) -> [(isChinese: Bool, keys: String)] {
+        guard !keys.isEmpty else { return [] }
         if isSyllable(keys) { return [(true, keys)] }
         // 全是數字又不成音節，就是使用者在打數字（0613、手機號碼），
         // 不要從尾部切出「06」=ㄢˊ 這種音節。注意「18」=ㄅㄚ=八 這類

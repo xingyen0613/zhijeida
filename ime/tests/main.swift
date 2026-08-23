@@ -121,6 +121,18 @@ if let joined = mList.first(where: { $0.word == "直接" }) {
     check("選後合成", m.text, "()直接")
 }
 
+print("\n空輸入不應產生空段落")
+var n = Composition()
+n.insertPending("")
+check("空字串不進組字區", n.itemCount, 0)
+check("組字區仍為空", n.text, "")
+var o = typed("d9 ")
+o.deleteForward()
+check("游標在尾端時向右刪無作用", o.text, "開")
+o.moveCursorToStart()
+o.deleteForward()
+check("向右刪除生效", o.text, "")
+
 print("\n使用者選字習慣")
 UserPhrases.reset()
 let recordKeys = "ru4xj4"
