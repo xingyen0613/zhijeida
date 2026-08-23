@@ -16,3 +16,6 @@ samples/*.txt
 
 # 個人詞庫含工作術語與持股代號，不進版控
 userdict.txt
+
+# 編譯產物
+ime/build/

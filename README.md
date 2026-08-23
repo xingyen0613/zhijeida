@@ -6,8 +6,23 @@ macOS 注音輸入法的中英混輸判別器。目標是在中文輸入狀態�
 
 ## 現況
 
-Phase 1：離線判別器（已完成驗證）。
-Phase 2：接上 IMK。預計 fork McBopomofo（MIT），只加判別層，不重寫注音引擎。
+- Phase 1：離線判別器（`judge.py`），已完成驗證。
+- Phase 2：IMK 輸入法原型（`ime/`），可編譯安裝，待實機測試。
+
+### Phase 2 已驗證的環境結論
+
+- **不需要 Xcode**。Command Line Tools 的 `swiftc` 就能編譯 InputMethodKit，
+  手工組 `.app` bundle 即可（見 `ime/build.sh`）。本機磁碟僅剩 21GB，裝不下 Xcode，
+  這條路徑繞開了該限制。
+- **ad-hoc 簽名可用**（`codesign --sign -`），自用不需要 Apple Developer Program。
+- **安裝後必須登出再登入**，macOS 才會把新輸入法列進系統設定。
+  `TISRegisterInputSource` 回傳成功也一樣，這是系統的已知行為。
+- `InputMethodConnectionName` 使用 bundle identifier 形式較穩妥。
+- 系統內建輸入法（`/System/Library/Input Methods/`）不是 IMK 架構，
+  不能拿來當 Info.plist 範例，參考 McBopomofo 的配置。
+
+Swift 版判別邏輯（`ime/Sources/Bopomofo.swift`）與 `judge.py` 對 147 個真實單元
+比對結果完全一致。
 
 ## 核心原理
 
