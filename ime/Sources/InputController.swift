@@ -34,6 +34,16 @@ class SmartBopomofoInputController: IMKInputController {
         guard let s = string, let ch = s.first,
               let client = sender as? IMKTextInput else { return false }
 
+        // 實作 inputText(_:key:modifiers:client:) 之後，IMK 會把方向鍵、
+        // Enter 這類按鍵也送到這裡。方向鍵的 characters 是 Unicode 私有區
+        // 字元（顯示成方塊），Enter 是 \r，都不能當成一般文字收進組字區。
+        // 回傳 false 讓它們回到 didCommand 的處理路徑。
+        if let scalar = ch.unicodeScalars.first {
+            let isFunctionKey = (0xF700...0xF8FF).contains(scalar.value)
+            let isControl = scalar.value < 0x20 || scalar.value == 0x7F
+            if isFunctionKey || isControl { return false }
+        }
+
         // 候選字視窗開啟時，數字鍵直接選字
         if candidatesVisible, let n = ch.wholeNumberValue, (1...9).contains(n) {
             selectCandidate(n - 1, client: client)

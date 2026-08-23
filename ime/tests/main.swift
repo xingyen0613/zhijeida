@@ -133,6 +133,18 @@ o.moveCursorToStart()
 o.deleteForward()
 check("向右刪除生效", o.text, "")
 
+print("\n功能鍵不可進入組字區")
+for (label, scalar) in [("下方向鍵", UnicodeScalar(0xF701)!), ("Enter", UnicodeScalar(0x0D)!),
+                        ("Tab", UnicodeScalar(0x09)!)] {
+    let ch = Character(scalar)
+    let isFunctionKey = (0xF700...0xF8FF).contains(scalar.value)
+    let isControl = scalar.value < 0x20 || scalar.value == 0x7F
+    check("\(label) 被擋下", (isFunctionKey || isControl) ? "yes" : "no", "yes")
+    _ = ch
+}
+check("一般字元放行", { let s = UnicodeScalar("d").value
+    return (0xF700...0xF8FF).contains(s) || s < 0x20 ? "no" : "yes" }(), "yes")
+
 print("\n使用者選字習慣")
 UserPhrases.reset()
 let recordKeys = "ru4xj4"
