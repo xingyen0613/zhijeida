@@ -9,6 +9,14 @@ let server = IMKServer(name: kConnectionName, bundleIdentifier: Bundle.main.bund
 let candidatesWindow = IMKCandidates(server: server,
                                      panelType: kIMKSingleColumnScrollingCandidatePanel)
 
+// 系統預設底色偏淡，文字對比不足；加深底色（依淺色/深色模式各自調整）提高可讀性。
+let candidatesBackgroundColor = NSColor(name: nil) { appearance in
+    appearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
+        ? NSColor(white: 0.10, alpha: 1.0)
+        : NSColor(white: 0.82, alpha: 1.0)
+}
+candidatesWindow?.setAttributes([NSAttributedString.DocumentAttributeKey.backgroundColor: candidatesBackgroundColor])
+
 imeLog("server started (\(server != nil))")
 
 // 預先載入資料，避免第一次輸入時卡頓，也讓載入問題在啟動時就浮現
