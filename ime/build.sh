@@ -15,7 +15,7 @@ swiftc -O \
 
 cp Info.plist "$APP/Contents/Info.plist"
 cp Resources/*.tiff "$APP/Contents/Resources/"
-cp Data/bpmf.tsv "$APP/Contents/Resources/"
+cp Data/bpmf.tsv Data/lm.tsv "$APP/Contents/Resources/"
 
 # 傳統 app bundle 需要 PkgInfo（Xcode 會自動產生，手工組要自己補）
 printf 'APPLSBPM' > "$APP/Contents/PkgInfo"

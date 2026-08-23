@@ -7,7 +7,7 @@ let server = IMKServer(name: kConnectionName, bundleIdentifier: Bundle.main.bund
 
 /// 候選字視窗。IMKCandidates 需要 server，所以在這裡建立供 controller 取用。
 let candidatesWindow = IMKCandidates(server: server,
-                                     panelType: kIMKSingleRowSteppingCandidatePanel)
+                                     panelType: kIMKSingleColumnScrollingCandidatePanel)
 
 NSLog("SmartBopomofo: server started (\(server != nil))")
 NSApplication.shared.run()

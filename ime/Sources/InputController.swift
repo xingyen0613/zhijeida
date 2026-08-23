@@ -1,3 +1,4 @@
+import Carbon
 import Cocoa
 import InputMethodKit
 
@@ -9,6 +10,30 @@ class SmartBopomofoInputController: IMKInputController {
     /// 正在輸入中的按鍵
     private var pending = ""
     private var candidatesVisible = false
+
+    // MARK: - 事件分派
+
+    /// 候選字視窗開啟時，方向鍵與確認鍵要交給它處理，否則它收不到事件。
+    override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
+        guard let event, event.type == .keyDown else {
+            return super.handle(event, client: sender)
+        }
+        if candidatesVisible {
+            switch Int(event.keyCode) {
+            case kVK_UpArrow, kVK_DownArrow, kVK_LeftArrow, kVK_RightArrow,
+                 kVK_Return, kVK_ANSI_KeypadEnter, kVK_Space:
+                candidatesWindow?.interpretKeyEvents([event])
+                return true
+            case kVK_Escape:
+                hideCandidates()
+                if let client = sender as? IMKTextInput { update(client) }
+                return true
+            default:
+                break
+            }
+        }
+        return super.handle(event, client: sender)
+    }
 
     // MARK: - 輸入
 
@@ -25,7 +50,10 @@ class SmartBopomofoInputController: IMKInputController {
         if ch == " " {
             // 有正在輸入的按鍵就先結算，否則把組字區送出
             if !pending.isEmpty {
+                // 英文詞之間的空白要保留，中文一聲的空白只是確認
+                let afterEnglish = Bopomofo.split(pending).last.map { !$0.isChinese } ?? false
                 flushPending()
+                if afterEnglish { composition.append(keys: " ", isChinese: false) }
                 update(client)
             } else if !composition.isEmpty {
                 commit(client)
@@ -67,7 +95,7 @@ class SmartBopomofoInputController: IMKInputController {
             return true
 
         case #selector(NSResponder.moveDown(_:)):
-            guard composition.currentSegment?.isChinese == true else { return false }
+            guard !composition.currentCandidates.isEmpty else { return false }
             showCandidates()
             return true
 
@@ -103,13 +131,11 @@ class SmartBopomofoInputController: IMKInputController {
     // MARK: - 候選字
 
     override func candidates(_ sender: Any!) -> [Any]! {
-        composition.currentSegment?.candidates ?? []
+        composition.currentCandidates
     }
 
     override func candidateSelected(_ candidateString: NSAttributedString!) {
-        guard let list = composition.currentSegment?.candidates,
-              let idx = list.firstIndex(of: candidateString.string) else { return }
-        composition.choose(idx)
+        composition.choose(candidateString.string)
         hideCandidates()
         if let client = client() { update(client) }
     }
@@ -126,8 +152,9 @@ class SmartBopomofoInputController: IMKInputController {
     }
 
     private func selectCandidate(_ index: Int, client: IMKTextInput) {
-        guard let list = composition.currentSegment?.candidates, index < list.count else { return }
-        composition.choose(index)
+        let list = composition.currentCandidates
+        guard index < list.count else { return }
+        composition.choose(list[index])
         hideCandidates()
         update(client)
     }
