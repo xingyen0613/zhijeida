@@ -41,9 +41,18 @@ enum LanguageModel {
         return result
     }
 
-    /// 這串按鍵對應的候選詞
+    /// 這串按鍵對應的候選詞，已疊上使用者的選字習慣
     static func candidates(_ keys: String) -> [(word: String, score: Double)] {
-        table[keys] ?? []
+        let base = table[keys] ?? []
+        guard !UserPhrases.isEmpty, !base.isEmpty else { return base }
+        var adjusted = base.map {
+            (word: $0.word, score: $0.score + UserPhrases.boost(keys: keys, word: $0.word))
+        }
+        // 只有真的動到分數才需要重排
+        if adjusted.contains(where: { UserPhrases.boost(keys: keys, word: $0.word) > 0 }) {
+            adjusted.sort { $0.score > $1.score }
+        }
+        return adjusted
     }
 
     /// 一段音節的最佳切法。回傳每個詞涵蓋的音節範圍。

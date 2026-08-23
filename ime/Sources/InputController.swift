@@ -223,6 +223,10 @@ class SmartBopomofoInputController: IMKInputController {
         guard !composition.isEmpty else { return }
         let text = composition.text
         imeLog("commit -> \(text)")
+        // 記住這次手動選過的詞，下次自動選字會偏向它
+        for choice in composition.userChoices() {
+            UserPhrases.record(keys: choice.keys, word: choice.word)
+        }
         composition.clear()
         hideCandidates()
         client.setMarkedText("", selectionRange: NSRange(location: 0, length: 0),

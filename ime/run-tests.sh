@@ -4,5 +4,9 @@ set -e
 cd "$(dirname "$0")"
 swiftc -O -o /tmp/smartbopomofo-tests \
     Sources/Log.swift Sources/Bopomofo.swift Sources/LanguageModel.swift \
-    Sources/Composition.swift tests/main.swift
-LM_TSV="$PWD/Data/lm.tsv" BPMF_TSV="$PWD/Data/bpmf.tsv" /tmp/smartbopomofo-tests 2>/dev/null
+    Sources/UserPhrases.swift Sources/Composition.swift tests/main.swift
+
+# 使用者詞彙導向暫存檔，測試不會動到真實的個人記錄
+LM_TSV="$PWD/Data/lm.tsv" BPMF_TSV="$PWD/Data/bpmf.tsv" \
+    USER_PHRASES_PATH="/tmp/smartbopomofo-test-phrases.tsv" \
+    /tmp/smartbopomofo-tests 2>/dev/null

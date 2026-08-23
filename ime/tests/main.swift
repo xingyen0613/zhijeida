@@ -87,5 +87,16 @@ var g = typed("cpu ")
 let gList = g.candidatesAtCursor()
 check("英文段落也有候選", gList.isEmpty ? "no" : "yes", "yes")
 
+print("\n使用者選字習慣")
+UserPhrases.reset()
+let recordKeys = "ru4xj4"
+let before = LanguageModel.candidates(recordKeys).first?.word ?? ""
+check("預設選字", before, "紀錄")
+UserPhrases.record(keys: recordKeys, word: "記錄")
+check("選過一次後改為偏好", LanguageModel.candidates(recordKeys).first?.word ?? "", "記錄")
+check("整句跟著改變", typed("ji3ul4ru4xj4").text.hasSuffix("記錄") ? "yes" : "no", "yes")
+UserPhrases.reset()
+check("清除後回到預設", LanguageModel.candidates(recordKeys).first?.word ?? "", "紀錄")
+
 print(failures == 0 ? "\n全部通過" : "\n\(failures) 項失敗")
 exit(failures == 0 ? 0 : 1)

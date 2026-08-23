@@ -114,6 +114,18 @@ struct Composition {
 
     var text: String { chunks().map(\.text).joined() }
 
+    /// 使用者這次明確選過的詞，送出時用來累積個人習慣
+    func userChoices() -> [(keys: String, word: String)] {
+        overrides.compactMap { start, choice in
+            let end = start + choice.span
+            guard end <= items.count else { return nil }
+            let keys = items[start..<end].map(\.keys).joined()
+            // 選回原始按鍵不是詞彙偏好，不必記錄
+            guard keys != choice.word else { return nil }
+            return (keys, choice.word)
+        }
+    }
+
     // MARK: - 選字
 
     /// 選字針對的位置：游標左側那個；游標在最前面時改看右側第一個
