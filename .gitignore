@@ -19,3 +19,6 @@ userdict.txt
 
 # 編譯產物
 ime/build/
+
+# 詞庫資料由 ime/fetch-data.sh 取得，授權屬 McBopomofo，不進版控
+ime/Data/

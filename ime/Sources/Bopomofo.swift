@@ -1,7 +1,10 @@
 import Foundation
 
-/// 大千（標準）注音鍵盤佈局與音節判定。
-/// 與 Phase 1 的 judge.py 同一套規則，見專案 README。
+/// 大千（標準）注音鍵盤佈局，以及以真實音節表為準的判定。
+///
+/// 音節表來自 McBopomofo 的 BPMFBase.txt（MIT License,
+/// Copyright (c) 2011-2026 Mengjuei Hsieh et al.），
+/// 只取 big5 常用字集，見 fetch-data.sh 與 Data/LICENSE-McBopomofo.txt。
 enum Bopomofo {
 
     static let key: [Character: Character] = [
@@ -20,54 +23,71 @@ enum Bopomofo {
 
     static let tone: [Character: Character] = ["3": "ˇ", "4": "ˋ", "6": "ˊ", "7": "˙"]
 
-    static let initials = Set("ㄅㄆㄇㄈㄉㄊㄋㄌㄍㄎㄏㄐㄑㄒㄓㄔㄕㄖㄗㄘㄙ")
-    static let medials = Set("ㄧㄨㄩ")
-    static let finals = Set("ㄚㄛㄜㄝㄞㄟㄠㄡㄢㄣㄤㄥㄦ")
-    /// 空韻，可自成音節（之吃是日資次私）
-    static let soloInitials = Set("ㄓㄔㄕㄖㄗㄘㄙ")
+    /// 按鍵序列 -> 該音節的候選漢字（依常用度排序）
+    private static let table: [String: [String]] = load()
 
-    /// 整串按鍵是否恰好構成單一合法注音音節（可帶聲調）。
-    /// 回傳注音字串，不合法則為 nil。
-    static func asSyllable(_ keys: String) -> String? {
-        var symbols = ""
-        var toneMark: Character? = nil
-        for ch in keys {
-            if let t = tone[ch] {
-                guard toneMark == nil else { return nil }
-                toneMark = t
-            } else if let s = key[ch] {
-                guard toneMark == nil else { return nil }  // 聲調後不能再接注音
-                symbols.append(s)
-            } else {
-                return nil
+    /// 所有合法按鍵序列的前綴，用來判斷「還可能打成中文」
+    private static let prefixes: Set<String> = {
+        var set = Set<String>()
+        for keys in table.keys {
+            for end in 1...keys.count {
+                set.insert(String(keys.prefix(end)))
             }
         }
-        var idx = symbols.startIndex
-        var ini: Character? = nil, med: Character? = nil, fin: Character? = nil
-        if idx < symbols.endIndex, initials.contains(symbols[idx]) {
-            ini = symbols[idx]; idx = symbols.index(after: idx)
+        return set
+    }()
+
+    private static func load() -> [String: [String]] {
+        let path = Bundle.main.path(forResource: "bpmf", ofType: "tsv")
+            ?? ProcessInfo.processInfo.environment["BPMF_TSV"]   // 命令列測試用
+        guard let path, let text = try? String(contentsOfFile: path, encoding: .utf8) else {
+            NSLog("SmartBopomofo: 找不到 bpmf.tsv，中文將只顯示注音")
+            return [:]
         }
-        if idx < symbols.endIndex, medials.contains(symbols[idx]) {
-            med = symbols[idx]; idx = symbols.index(after: idx)
+        var result: [String: [String]] = [:]
+        for line in text.split(separator: "\n") {
+            let parts = line.split(separator: "\t")
+            guard parts.count == 2 else { continue }
+            result[String(parts[0])] = parts[1].map(String.init)
         }
-        if idx < symbols.endIndex, finals.contains(symbols[idx]) {
-            fin = symbols[idx]; idx = symbols.index(after: idx)
-        }
-        guard idx == symbols.endIndex, ini != nil || med != nil || fin != nil else { return nil }
-        if med == nil, fin == nil, let i = ini, !soloInitials.contains(i) { return nil }
-        return symbols + (toneMark.map(String.init) ?? "")
+        NSLog("SmartBopomofo: 載入 \(result.count) 個音節")
+        return result
     }
 
-    /// 這串按鍵有沒有可能再延伸成合法音節（決定組字區要顯示注音還是英文）
+    /// 這串按鍵是不是一個完整合法的音節（以真實音節表為準）
+    static func isSyllable(_ keys: String) -> Bool {
+        table[keys] != nil
+    }
+
+    /// 這串按鍵有沒有可能再延伸成合法音節
     static func couldBeSyllable(_ keys: String) -> Bool {
-        if asSyllable(keys) != nil { return true }
-        for extra in Array(key.keys) + Array(tone.keys) {
-            if asSyllable(keys + String(extra)) != nil { return true }
-        }
-        return false
+        prefixes.contains(keys)
     }
 
-    /// 把按鍵轉成注音符號串（不檢查合法性，供組字區顯示用）
+    /// 候選漢字，依常用度排序
+    static func candidates(_ keys: String) -> [String] {
+        table[keys] ?? []
+    }
+
+    /// 把一段按鍵切成「英文前綴 + 中文音節」。
+    /// 英文與注音之間沒有分隔符（macbooknji3），從尾部取最長合法音節，前綴即英文。
+    static func split(_ keys: String) -> [(isChinese: Bool, keys: String)] {
+        if isSyllable(keys) { return [(true, keys)] }
+        // 中文音節後必有聲調鍵或空白，所以全字母的單元不會是「英文+注音」黏著
+        let hasNonLetter = keys.contains { !$0.isLetter }
+        if hasNonLetter, keys.count > 1 {
+            for offset in 1..<keys.count {
+                let idx = keys.index(keys.startIndex, offsetBy: offset)
+                let tail = String(keys[idx...])
+                if isSyllable(tail) {
+                    return [(false, String(keys[..<idx])), (true, tail)]
+                }
+            }
+        }
+        return [(false, keys)]
+    }
+
+    /// 把按鍵轉成注音符號串（組字區顯示用）
     static func symbols(_ keys: String) -> String {
         String(keys.compactMap { key[$0] ?? tone[$0] })
     }

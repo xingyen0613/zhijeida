@@ -7,15 +7,24 @@ class SmartBopomofoInputController: IMKInputController {
     /// 尚未上屏的原始按鍵序列
     private var buffer = ""
 
-    // MARK: - 判別
-
-    /// 目前 buffer 該以什麼形式呈現：注音（中文）或原樣字母（英文）
-    private var isChinese: Bool {
-        Bopomofo.couldBeSyllable(buffer)
+    /// 組字區呈現：中文段落顯示注音，英文段落顯示原樣字母
+    private var markedText: String {
+        Bopomofo.split(buffer).map {
+            $0.isChinese ? Bopomofo.symbols($0.keys) : $0.keys
+        }.joined()
     }
 
-    private var displayText: String {
-        isChinese ? Bopomofo.symbols(buffer) : buffer
+    /// 上屏內容：中文段落取最常用的漢字
+    private var committedText: String {
+        Bopomofo.split(buffer).map { part in
+            guard part.isChinese else { return part.keys }
+            return Bopomofo.candidates(part.keys).first ?? Bopomofo.symbols(part.keys)
+        }.joined()
+    }
+
+    /// buffer 是否以英文結尾（決定空白要不要一起送出）
+    private var endsWithEnglish: Bool {
+        Bopomofo.split(buffer).last.map { !$0.isChinese } ?? false
     }
 
     // MARK: - IMKInputController
@@ -24,27 +33,25 @@ class SmartBopomofoInputController: IMKInputController {
         guard let s = string, let ch = s.first,
               let client = sender as? IMKTextInput else { return false }
 
-        // 空白：結束目前單元。buffer 空的話讓空白照常輸入。
+        // 空白：結束目前單元。英文詞之間的空白要保留，中文一聲的空白是選字確認。
         if ch == " " {
             guard !buffer.isEmpty else { return false }
+            let keepSpace = endsWithEnglish
             commit(client)
-            return true
-        }
-
-        // 聲調鍵：能構成合法音節就結束這個音節
-        if Bopomofo.tone[ch] != nil {
-            if Bopomofo.asSyllable(buffer + String(ch)) != nil {
-                buffer += String(ch)
-                commit(client)
-                return true
+            if keepSpace {
+                client.insertText(" ", replacementRange: NSRange(location: NSNotFound, length: 0))
             }
-            // 構不成音節，聲調鍵本身不是字母，直接送出
-            commit(client)
-            client.insertText(s, replacementRange: NSRange(location: NSNotFound, length: 0))
             return true
         }
 
-        buffer += String(ch)
+        buffer.append(ch)
+
+        // 聲調鍵標記一個音節結束，一律結算
+        if Bopomofo.tone[ch] != nil {
+            commit(client)
+            return true
+        }
+
         update(client)
         return true
     }
@@ -74,7 +81,7 @@ class SmartBopomofoInputController: IMKInputController {
     // MARK: - 組字區
 
     private func update(_ client: IMKTextInput) {
-        let text = displayText
+        let text = markedText
         client.setMarkedText(text,
                              selectionRange: NSRange(location: text.count, length: 0),
                              replacementRange: NSRange(location: NSNotFound, length: 0))
@@ -82,8 +89,8 @@ class SmartBopomofoInputController: IMKInputController {
 
     private func commit(_ client: IMKTextInput) {
         guard !buffer.isEmpty else { return }
-        let text = displayText
-        NSLog("SmartBopomofo: commit keys=\(buffer) as=\(isChinese ? "ZH" : "EN") text=\(text)")
+        let text = committedText
+        NSLog("SmartBopomofo: commit keys=\(buffer) -> \(text)")
         buffer = ""
         client.setMarkedText("", selectionRange: NSRange(location: 0, length: 0),
                              replacementRange: NSRange(location: NSNotFound, length: 0))
