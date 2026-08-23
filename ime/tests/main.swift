@@ -6,9 +6,7 @@ func typed(_ keys: String) -> Composition {
     var pending = ""
     func flush() {
         guard !pending.isEmpty else { return }
-        for part in Bopomofo.split(pending) {
-            comp.insert(keys: part.keys, isChinese: part.isChinese)
-        }
+        comp.insertPending(pending)
         pending = ""
     }
     for ch in keys.lowercased() {
@@ -28,6 +26,9 @@ func typed(_ keys: String) -> Composition {
 }
 
 var failures = 0
+func check(_ label: String, _ got: Int, _ want: Int) {
+    check(label, String(got), String(want))
+}
 func check(_ label: String, _ got: String, _ want: String) {
     if got == want {
         print("  ✓ \(label)")
@@ -65,7 +66,7 @@ check("含單字候選", list.contains { $0.span == 1 } ? "yes" : "no", "yes")
 print("\n編輯")
 var d = typed("d9 z8 ")
 d.moveCursor(-1)
-for part in Bopomofo.split("5k4") { d.insert(keys: part.keys, isChinese: part.isChinese) }
+d.insertPending("5k4")
 check("句中插入", d.text, "開這發")
 var e = typed("5k4g4u ek7")
 e.moveCursor(-1)
@@ -97,6 +98,27 @@ check("候選含尾段的中文", hList.contains { $0.word == "跟" } ? "yes" : 
 if let gen = hList.first(where: { $0.word == "跟" }) {
     h.choose(gen)
     check("選後切成 cpo + 跟", h.text, "cpo跟 ")
+}
+
+print("\n符號與向右刪除")
+var k = typed("()")
+check("符號各自獨立", k.items.count, 2)
+k.moveCursorToStart()
+k.moveCursor(1)
+check("游標可停在括號之間", { let (t, o) = k.marked(pendingKeys: "")
+    return String(t.prefix(o)) + "|" + String(t.dropFirst(o)) }(), "(|)")
+k.deleteForward()
+check("向右刪除只刪一個", k.text, "(")
+
+print("\n跨段落詞（56 + 接 = 直接）")
+var m = typed("()56ru, ")
+check("預設", m.text, "()56接")
+m.moveCursor(-1)
+let mList = m.candidatesAtCursor()
+check("候選含跨段落詞", mList.contains { $0.word == "直接" } ? "yes" : "no", "yes")
+if let joined = mList.first(where: { $0.word == "直接" }) {
+    m.choose(joined)
+    check("選後合成", m.text, "()直接")
 }
 
 print("\n使用者選字習慣")

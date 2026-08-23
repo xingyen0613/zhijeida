@@ -82,6 +82,16 @@ class SmartBopomofoInputController: IMKInputController {
             update(client)
             return true
 
+        case #selector(NSResponder.deleteForward(_:)):
+            guard !composition.isEmpty || !pending.isEmpty else { return false }
+            if !pending.isEmpty {
+                flushPending()
+            } else {
+                composition.deleteForward()
+            }
+            update(client)
+            return true
+
         case #selector(NSResponder.moveToBeginningOfLine(_:)):
             guard !composition.isEmpty else { return false }
             flushPending()
@@ -194,9 +204,7 @@ class SmartBopomofoInputController: IMKInputController {
     /// 把 pending 的按鍵切成段落放進組字區
     private func flushPending() {
         guard !pending.isEmpty else { return }
-        for part in Bopomofo.split(pending) {
-            composition.insert(keys: part.keys, isChinese: part.isChinese)
-        }
+        composition.insertPending(pending)
         pending = ""
     }
 

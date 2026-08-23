@@ -62,6 +62,28 @@ struct Composition {
         cursor -= 1
     }
 
+    /// 把一串待處理的按鍵切段後插入。
+    /// InputController 與測試共用這裡，避免兩邊邏輯漂移。
+    mutating func insertPending(_ keys: String) {
+        for part in Bopomofo.split(keys) {
+            if part.isChinese {
+                insert(keys: part.keys, isChinese: true)
+            } else {
+                // 符號拆成獨立單位，游標才能移進 () 之間
+                for token in Bopomofo.englishTokens(part.keys) {
+                    insert(keys: token, isChinese: false)
+                }
+            }
+        }
+    }
+
+    mutating func deleteForward() {
+        guard cursor < items.count else { return }
+        items.remove(at: cursor)
+        overrides.removeValue(forKey: cursor)
+        shiftOverrides(from: cursor + 1, by: -1)
+    }
+
     mutating func clear() {
         items.removeAll()
         overrides.removeAll()
@@ -169,14 +191,21 @@ struct Composition {
             var list = LanguageModel.candidates(literal).map {
                 Candidate(word: $0.word, start: target, span: 1, score: $0.score)
             }
-            if literal.count > 1 {
-                for offset in 1..<literal.count {
-                    let idx = literal.index(literal.startIndex, offsetBy: offset)
-                    let tail = String(literal[idx...])
-                    let prefix = String(literal[..<idx])
-                    for entry in LanguageModel.candidates(tail) {
-                        list.append(Candidate(word: entry.word, start: target, span: 1,
-                                              score: entry.score, englishPrefix: prefix))
+            for offset in 0..<literal.count {
+                let idx = literal.index(literal.startIndex, offsetBy: offset)
+                let tail = String(literal[idx...])
+                let prefix = String(literal[..<idx])
+                guard offset > 0 || !prefix.isEmpty || literal.count > 0 else { continue }
+                // 尾段本身，以及尾段再接上後面幾個中文音節（56 + 接 = 直接）
+                for extra in 0..<LanguageModel.maxSpan {
+                    let end = target + 1 + extra
+                    guard end <= items.count else { break }
+                    guard items[(target + 1)..<end].allSatisfy(\.isChinese) else { break }
+                    let keys = tail + items[(target + 1)..<end].map(\.keys).joined()
+                    for entry in LanguageModel.candidates(keys) {
+                        list.append(Candidate(word: entry.word, start: target,
+                                              span: 1 + extra, score: entry.score,
+                                              englishPrefix: offset == 0 ? "" : prefix))
                     }
                 }
             }
@@ -227,11 +256,17 @@ struct Composition {
             let whole = items[candidate.start].keys
             guard prefix.count < whole.count else { return }
             let syllable = String(whole.dropFirst(prefix.count))
-            items[candidate.start] = .english(prefix)
-            items.insert(.chinese(keys: syllable), at: candidate.start + 1)
-            shiftOverrides(from: candidate.start + 1, by: 1)
-            overrides[candidate.start + 1] = (candidate.word, 1)
-            if cursor > candidate.start { cursor += 1 }
+            if prefix.isEmpty {
+                // 整段都是中文，不需要拆
+                items[candidate.start] = .chinese(keys: syllable)
+                overrides[candidate.start] = (candidate.word, candidate.span)
+            } else {
+                items[candidate.start] = .english(prefix)
+                items.insert(.chinese(keys: syllable), at: candidate.start + 1)
+                shiftOverrides(from: candidate.start + 1, by: 1)
+                overrides[candidate.start + 1] = (candidate.word, candidate.span)
+                if cursor > candidate.start { cursor += 1 }
+            }
             return
         }
         // 蓋住的範圍內原有的選擇要清掉，避免衝突

@@ -93,6 +93,23 @@ enum Bopomofo {
         return [(false, keys)]
     }
 
+    /// 把一段英文切成獨立單位：連續的字母數字算一個，符號各自獨立。
+    /// 這樣 () 不會黏成一塊，游標可以移進括號中間。
+    static func englishTokens(_ keys: String) -> [String] {
+        var result: [String] = []
+        var current = ""
+        for ch in keys {
+            if ch.isLetter || ch.isNumber {
+                current.append(ch)
+            } else {
+                if !current.isEmpty { result.append(current); current = "" }
+                result.append(String(ch))
+            }
+        }
+        if !current.isEmpty { result.append(current) }
+        return result
+    }
+
     /// 把按鍵轉成注音符號串（組字區顯示用）
     static func symbols(_ keys: String) -> String {
         String(keys.compactMap { key[$0] ?? tone[$0] })
