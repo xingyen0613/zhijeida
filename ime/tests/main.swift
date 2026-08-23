@@ -158,6 +158,14 @@ for (label, scalar) in [("下方向鍵", UnicodeScalar(0xF701)!), ("Enter", Unic
 check("一般字元放行", { let s = UnicodeScalar("d").value
     return (0xF700...0xF8FF).contains(s) || s < 0x20 ? "no" : "yes" }(), "yes")
 
+print("\n符號全半形")
+var p1 = typed("ji3")        // 我
+check("中文後判定為中文", p1.precededByChinese ? "yes" : "no", "yes")
+var p2 = typed("test ")      // 英文
+check("英文後判定為非中文", p2.precededByChinese ? "yes" : "no", "no")
+check("逗號有對應全形", Symbols.full(",") ?? "", "，")
+check("句號有對應全形", Symbols.full(".") ?? "", "。")
+
 print("\n使用者選字習慣")
 UserPhrases.reset()
 let recordKeys = "ru4xj4"

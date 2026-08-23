@@ -9,6 +9,8 @@ class SmartBopomofoInputController: IMKInputController {
     /// 正在輸入中的按鍵
     private var pending = ""
     private var candidatesVisible = false
+    /// 上次送出的內容是否以中文結尾，組字區清空後仍要據此判斷符號形式
+    private var lastCommitWasChinese = false
     /// 候選視窗目前列出的項目，用來把選中的字串對應回音節範圍
     private var shownCandidates: [Candidate] = []
 
@@ -17,30 +19,6 @@ class SmartBopomofoInputController: IMKInputController {
     override func inputText(_ string: String!, client sender: Any!) -> Bool {
         guard let s = string, let ch = s.first,
               let client = sender as? IMKTextInput else { return false }
-
-        // Option / Ctrl + 符號輸出全形。
-        // 要用 charactersIgnoringModifiers 取原始按鍵：Option+, 的 characters
-        // 是「≤」，Ctrl 組合則可能已經是控制字元。
-        // 這段必須排在下面的控制字元過濾之前，否則會被提前擋掉。
-        //
-        // 以 Option 為主：Ctrl+, 在許多應用程式是「偏好設定」的快捷鍵，
-        // 會被攔在輸入法之前（日誌完全收不到該按鍵）。
-        let modifiers = NSApp.currentEvent?.modifierFlags ?? []
-        if modifiers.contains(.option) || modifiers.contains(.control) {
-            let raw = NSApp.currentEvent?.charactersIgnoringModifiers ?? s
-            if let full = Symbols.full(raw) {
-                imeLog("全形符號 \(raw) -> \(full)")
-                flushPending()
-                composition.insert(keys: full, isChinese: false)
-                update(client)
-                return true
-            }
-            // 其他組合是應用程式的快捷鍵。放行之前先把組字區送出，
-            // 否則使用者已經打好的內容會隨著焦點轉移憑空消失。
-            imeLog("修飾鍵組合 \(raw)，放行")
-            if !composition.isEmpty || !pending.isEmpty { commit(client) }
-            return false
-        }
 
         // 私有區字元（方向鍵等）與控制字元不是可輸入的文字，直接忽略。
         // 注意這裡要吃掉而不是回傳 false —— 回傳 false 會讓按鍵落到
@@ -52,6 +30,24 @@ class SmartBopomofoInputController: IMKInputController {
                 imeLog("忽略非文字按鍵 U+\(String(scalar.value, radix: 16))")
                 return !composition.isEmpty || !pending.isEmpty
             }
+        }
+
+        // 符號依前文自動決定全形或半形。
+        //
+        // 原本想用 Option / Ctrl + 符號來切換，但兩條路都不通：
+        // Ctrl 組合被應用程式攔在輸入法之前（日誌收不到按鍵），
+        // 而 IMK 是透過 IPC 送按鍵進來、不走 NSApplication 的事件循環，
+        // NSApp.currentEvent 因此拿不到修飾鍵。能取得修飾鍵的
+        // inputText(_:key:modifiers:client:) 與 handle(_:client:)
+        // 都會改變 IMK 的事件分派（先前已因此回歸三次）。
+        //
+        // 看前一個字是中文還是英文更穩，也更貼近實際書寫習慣。
+        if pending.isEmpty, let full = Symbols.full(s),
+           composition.precededByChinese || (composition.isEmpty && lastCommitWasChinese) {
+            imeLog("中文後的符號 \(s) -> \(full)")
+            composition.insert(keys: full, isChinese: false)
+            update(client)
+            return true
         }
 
         // 候選字視窗開啟時，數字鍵直接選字
@@ -266,6 +262,7 @@ class SmartBopomofoInputController: IMKInputController {
         guard !composition.isEmpty else { return }
         let text = composition.text
         imeLog("commit -> \(text)")
+        lastCommitWasChinese = text.last.map { ("\u{4E00}"..."\u{9FFF}").contains(String($0)) } ?? false
         // 記住這次手動選過的詞，下次自動選字會偏向它
         for choice in composition.userChoices() {
             UserPhrases.record(keys: choice.keys, word: choice.word)
