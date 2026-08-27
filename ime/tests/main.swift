@@ -6,16 +6,34 @@ func typed(_ keys: String) -> Composition {
     var pending = ""
     func flush() {
         guard !pending.isEmpty else { return }
+        // 擱置的標點沒等到聲調鍵，結算成全形標點
+        if Symbols.isAmbiguous(pending), comp.precededByChinese, let full = Symbols.full(pending) {
+            comp.insert(keys: full, isChinese: false)
+            pending = ""
+            return
+        }
         comp.insertPending(pending)
         pending = ""
     }
     for ch in keys.lowercased() {
+        // 擱置中的標點：這一鍵決定它是標點還是韻母
+        if Symbols.isAmbiguous(pending), comp.precededByChinese,
+           !Symbols.staysBopomofo(pending, next: ch) { flush() }
         if ch == " " {
             // 英文詞之間的空白要保留，中文一聲的空白只是確認
             let afterEnglish = !pending.isEmpty
                 && (Bopomofo.split(pending).last.map { !$0.isChinese } ?? false)
             flush()
             if afterEnglish { comp.insert(keys: " ", isChinese: false) }
+            continue
+        }
+        // 中文之後的符號轉全形；同時是韻母的先擱著等下一鍵
+        if pending.isEmpty, let full = Symbols.full(String(ch)), comp.precededByChinese {
+            if Symbols.isAmbiguous(String(ch)) {
+                pending = String(ch)
+            } else {
+                comp.insert(keys: full, isChinese: false)
+            }
             continue
         }
         pending.append(ch)
@@ -44,6 +62,9 @@ check("整句混輸",
       "因為我的電腦是macbook所以有些應用不相容")
 check("技術縮寫", typed("cpu ccl pcb ").text, "cpu ccl pcb ")
 check("英文黏著注音", typed("macbooknji3").text, "macbook所")
+// 沒有聲調鍵的尾段不會是中文，否則 .apk 會被切成 .ap +「k」=ㄜ= 阿
+check("副檔名不被切成注音", typed(".apk").text, ".apk")
+check("符號開頭的英文", typed("(sdk)").text, "(sdk)")
 
 print("\n分詞")
 check("測試", typed("hk4g4").text, "測試")
@@ -174,6 +195,26 @@ var p2 = typed("test ")      // 英文
 check("英文後判定為非中文", p2.precededByChinese ? "yes" : "no", "no")
 check("逗號有對應全形", Symbols.full(",") ?? "", "，")
 check("句號有對應全形", Symbols.full(".") ?? "", "。")
+
+print("\n既是標點也是韻母的鍵（, . ; / -）")
+check("中文後的 ㄦˊ 仍是「而」", typed("z03-6").text, "反而")
+check("中文後的 ㄦˋ 仍是「二」", typed("u ek7-4").text, "一個二")
+check("中文後的逗號還是逗號", typed("cl3,").text, "好，")
+check("逗號後可以接著打中文", typed("cl3,204").text, "好，但")
+check("中文後的句號還是句號", typed("cl3.").text, "好。")
+check("英文後的符號維持半形", typed("test,").text, "test,")
+check("連續標點都是全形", typed("cl3,]").text, "好，」")
+// 開頭的引號前面還沒有中文，依「看前文」的規則只能是半形
+check("後引號跟著中文轉全形", typed("[cl3]").text, "[好」")
+check("全形標點後的英文不受影響", typed("cl3,api").text, "好，api")
+
+print("\n多音字分讀音計次")
+let shui = LanguageModel.candidates("gjo4").map(\.word)
+check("ㄕㄨㄟˋ 的「說」排在「睡」之後",
+      (shui.firstIndex(of: "說") ?? 99) > (shui.firstIndex(of: "睡") ?? 99) ? "yes" : "no", "yes")
+check("ㄕㄨㄛ 的第一順位仍是「說」",
+      LanguageModel.candidates("gji").first?.word ?? "", "說")
+check("ㄜ 的第一順位仍是「阿」", LanguageModel.candidates("k").first?.word ?? "", "阿")
 
 print("\n使用者選字習慣")
 UserPhrases.reset()

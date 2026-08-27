@@ -51,11 +51,12 @@ struct Composition {
     var isEmpty: Bool { items.isEmpty }
     var itemCount: Int { items.count }
 
-    /// 游標左側是不是中文，用來決定符號要全形還是半形
+    /// 游標左側是不是中文，用來決定符號要全形還是半形。
+    /// 已經轉成全形的標點也算，連續兩個標點才不會第二個掉回半形。
     var precededByChinese: Bool {
         let idx = cursor - 1
         guard idx >= 0, idx < items.count else { return false }
-        return items[idx].isChinese
+        return items[idx].isChinese || Symbols.isFullWidth(items[idx].keys)
     }
 
     // MARK: - 編輯

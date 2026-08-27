@@ -38,7 +38,7 @@ macOS 的注音輸入法，讓你在中文輸入狀態下直接打英文，不�
 
 ## 下載安裝
 
-到 [Releases](https://github.com/xingyen0613/zhijeida/releases) 下載 **`Zhijeida-0.1.pkg`**，
+到 [Releases](https://github.com/xingyen0613/zhijeida/releases) 下載 **`Zhijeida-0.1.2.pkg`**，
 只有這一個檔案，Apple Silicon 與 Intel 共用。需要 macOS 12 以上。
 
 **1. 打開安裝檔。** 第一次打開會被系統擋下，說「無法打開，因為無法驗證開發者」。

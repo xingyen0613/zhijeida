@@ -32,6 +32,13 @@ class ZhijeidaInputController: IMKInputController {
             }
         }
 
+        // 擱置中的標點：這一鍵決定它是標點還是韻母（-6 = ㄦˊ = 而）。
+        // 空白、字母、其他符號都不會讓它變中文，一律先結算成標點。
+        if Symbols.isAmbiguous(pending), afterChinese,
+           !Symbols.staysBopomofo(pending, next: ch) {
+            flushPending()
+        }
+
         // 符號依前文自動決定全形或半形。
         //
         // 原本想用 Option / Ctrl + 符號來切換，但兩條路都不通：
@@ -42,8 +49,14 @@ class ZhijeidaInputController: IMKInputController {
         // 都會改變 IMK 的事件分派（先前已因此回歸三次）。
         //
         // 看前一個字是中文還是英文更穩，也更貼近實際書寫習慣。
-        if pending.isEmpty, let full = Symbols.full(s),
-           composition.precededByChinese || (composition.isEmpty && lastCommitWasChinese) {
+        if pending.isEmpty, let full = Symbols.full(s), afterChinese {
+            // , . ; / - 同時是韻母，還不能定案，先擱著等下一鍵
+            if Symbols.isAmbiguous(s) {
+                imeDebug("中文後的 \(s) 可能是韻母，先擱置")
+                pending = s
+                update(client)
+                return true
+            }
             imeDebug("中文後的符號 \(s) -> \(full)")
             composition.insert(keys: full, isChinese: false)
             update(client)
@@ -232,15 +245,29 @@ class ZhijeidaInputController: IMKInputController {
 
     // MARK: - 組字區
 
+    /// 游標左邊是不是中文，用來決定符號要全形還是半形
+    private var afterChinese: Bool {
+        composition.precededByChinese || (composition.isEmpty && lastCommitWasChinese)
+    }
+
     /// 把 pending 的按鍵切成段落放進組字區
     private func flushPending() {
         guard !pending.isEmpty else { return }
+        // 擱置的標點沒等到聲調鍵，結算成全形標點
+        if Symbols.isAmbiguous(pending), afterChinese, let full = Symbols.full(pending) {
+            composition.insert(keys: full, isChinese: false)
+            pending = ""
+            return
+        }
         composition.insertPending(pending)
         pending = ""
     }
 
     private func update(_ client: IMKTextInput) {
-        let (text, offset) = composition.marked(pendingKeys: pending)
+        // 擱置中的標點照標點顯示（否則「。」會先閃成 ㄡ），等聲調鍵來了才變注音
+        let shown = Symbols.isAmbiguous(pending) && afterChinese
+            ? (Symbols.full(pending) ?? pending) : pending
+        let (text, offset) = composition.marked(pendingKeys: shown)
         let attributed = NSMutableAttributedString(string: text)
         let whole = NSRange(location: 0, length: (text as NSString).length)
         attributed.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: whole)
@@ -262,7 +289,9 @@ class ZhijeidaInputController: IMKInputController {
         guard !composition.isEmpty else { return }
         let text = composition.text
         imeDebug("commit -> \(text)")
-        lastCommitWasChinese = text.last.map { ("\u{4E00}"..."\u{9FFF}").contains(String($0)) } ?? false
+        lastCommitWasChinese = text.last.map {
+            ("\u{4E00}"..."\u{9FFF}").contains(String($0)) || Symbols.isFullWidth(String($0))
+        } ?? false
         // 記住這次手動選過的詞，下次自動選字會偏向它
         for choice in composition.userChoices() {
             UserPhrases.record(keys: choice.keys, word: choice.word)

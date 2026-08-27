@@ -86,6 +86,10 @@ enum Bopomofo {
                 let tail = String(keys[idx...])
                 // 尾段全是數字時視為數字的一部分（user2024 的 06 不是ㄢˊ）
                 if tail.allSatisfy(\.isNumber) { continue }
+                // 尾段全是字母就不可能是中文：一聲音節要按空白才結算，
+                // 帶聲調的音節尾必有聲調鍵，兩種情況尾段都不會全是字母。
+                // 少了這條，.apk 會被切成 .ap +「k」=ㄜ= 阿。
+                if tail.allSatisfy(\.isLetter) { continue }
                 if isSyllable(tail) {
                     return [(false, String(keys[..<idx])), (true, tail)]
                 }

@@ -88,7 +88,6 @@ def classify(unit, endict):
     zh = as_syllable(unit)
     if zh:
         return [('ZH', unit, zh)]
-    has_nonalpha = not unit.isalpha()
     if unit.isalpha() and unit in endict:
         return [('EN', unit, '')]
     # 從尾部取最長合法音節，前綴視為英文
@@ -96,7 +95,10 @@ def classify(unit, endict):
         tail = as_syllable(unit[i:])
         if tail:
             head = unit[:i]
-            if has_nonalpha or head in endict:
+            # 尾段帶非字母（nji3 的聲調鍵）本身就是中文的證據；
+            # 尾段全是字母時只能靠詞典認出前綴（sdkep = sdk + ㄍㄣ），
+            # 否則 .apk 會因為開頭有個「.」就被切成 .ap + ㄜ。
+            if not unit[i:].isalpha() or head in endict:
                 return [('EN', head, ''), ('ZH', unit[i:], tail)]
     return [('EN', unit, '')]
 

@@ -37,7 +37,7 @@ This rule doesn't apply to users who don't type tone marks — that case needs a
 
 ## Download and install
 
-Download **`Zhijeida-0.1.pkg`** from [Releases](https://github.com/xingyen0613/zhijeida/releases) — it's the only file you need, shared between Apple Silicon and Intel. Requires macOS 12 or later.
+Download **`Zhijeida-0.1.2.pkg`** from [Releases](https://github.com/xingyen0613/zhijeida/releases) — it's the only file you need, shared between Apple Silicon and Intel. Requires macOS 12 or later.
 
 **1. Open the installer.** The first time, macOS will block it with "cannot be opened because the developer cannot be verified." This input method isn't signed with an Apple Developer certificate (code signing and notarization require a paid Apple Developer Program membership) — the file itself is fine. Go to **System Settings → Privacy & Security**, scroll down to find the blocked file, click **Open Anyway**, then open the installer again.
 
